@@ -4,28 +4,32 @@
 {% block title %}Staff Directory{% endblock %}
 
 {% block content %}
+
 <div class="dashboard-header">
-    <h1>Staff Directory</h1>
-    <p>A complete list of all registered teaching staff.</p>
+    <h1>👨‍🏫 Staff Directory</h1>
+    <p>A complete list of all registered teaching staff</p>
 </div>
 
 <!-- Search Bar -->
-<div class="search-bar">
-    <form method="GET" class="search-form">
-        <input type="text" name="search" placeholder="Search by name, TSC number, or email..." 
-               value="{{ search_query }}">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-search"></i> Search
-        </button>
+<div class="search-container-modern">
+    <form method="GET" class="search-form-modern">
+        <div class="search-input-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" name="search" placeholder="Search by name, TSC number, or email..." value="{{ search_query }}">
+        </div>
+        <button type="submit" class="btn-primary">Search</button>
         {% if search_query %}
-        <a href="{% url 'teacher_list' %}" class="btn btn-outline">Clear</a>
+        <a href="{% url 'teacher_list' %}" class="btn-secondary">Clear</a>
         {% endif %}
     </form>
 </div>
 
-<div class="data-table-container">
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-chalkboard-user"></i> All Teachers</h3>
+    </div>
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table-modern">
             <thead>
                 <tr>
                     <th>Full Name</th>
@@ -34,55 +38,64 @@
                     <th>Date of Joining</th>
                     <th>Email</th>
                     <th>Phone</th>
+                    {% if request.user.role == 'SUPER_ADMIN' %}
                     <th>Actions</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for teacher in teachers %}
                 <tr>
-                    <td>{{ teacher.name }}</td>
+                    <td><strong>{{ teacher.name }}</strong></td>
                     <td>{{ teacher.tsc_number }}</td>
-                    <td>
-                        {% if teacher.experience %}
-                            {{ teacher.experience }} yrs
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if teacher.date_of_joining %}
-                            {{ teacher.date_of_joining|date:"d M Y" }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
+                    <td>{% if teacher.experience %}{{ teacher.experience }} yrs{% else %}-{% endif %}</td>
+                    <td>{% if teacher.date_of_joining %}{{ teacher.date_of_joining|date:"d M Y" }}{% else %}-{% endif %}</td>
                     <td>{{ teacher.user.email }}</td>
                     <td>{{ teacher.phone|default:"-" }}</td>
-                    <td>
-                        {% if request.user.role == 'SUPER_ADMIN' %}
-                        <a href="{% url 'delete_teacher' teacher.id %}" 
-                           onclick="return confirm('Delete {{ teacher.name }}? This cannot be undone!')"
-                           class="btn btn-danger btn-sm">
-                            <i class="fas fa-trash"></i> Delete
-                        </a>
-                        {% endif %}
-                    </td>
+                    {% if request.user.role == 'SUPER_ADMIN' %}
+                    <td><a href="{% url 'delete_teacher' teacher.id %}" class="btn-delete" onclick="return confirm('Delete {{ teacher.name }}?')"><i class="fas fa-trash"></i> Delete</a></td>
+                    {% endif %}
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="8" class="table-empty">
-                        <i class="fas fa-chalkboard-user"></i><br>
-                        {% if search_query %}
-                            No teachers found matching "{{ search_query }}".
-                        {% else %}
-                            No teachers found. 
-                            <a href="{% url 'register_page' %}" style="color: var(--soft-green);">Add one now?</a>
-                        {% endif %}
-                    </td>
-                </tr>
+                <tr><td colspan="7" class="empty-state">No teachers found. <a href="{% url 'register_page' %}">Add one now?</a></td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+.search-container-modern {
+    background: white;
+    border-radius: 20px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.search-form-modern {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.search-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+.search-input-wrapper i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+}
+.search-input-wrapper input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    font-size: 0.85rem;
+}
+.btn-delete { background: #fee2e2; color: #dc2626; padding: 0.25rem 0.75rem; border-radius: 8px; text-decoration: none; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 0.25rem; }
+</style>
+
 {% endblock %}

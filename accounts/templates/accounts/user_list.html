@@ -6,7 +6,7 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>System Users</h1>
-    <p>A complete list of all registered users.</p>
+    <p>A complete list of all registered users in your school.</p>
 </div>
 
 {% if messages %}
@@ -17,31 +17,52 @@
     {% endfor %}
 {% endif %}
 
+<!-- Search and Filter Bar - Modern Card -->
 <!-- Search and Filter Bar -->
-<div class="search-bar">
-    <form method="GET" class="search-form">
-        <input type="text" name="search" placeholder="Search by username, name, or email..." 
-               value="{{ search_query }}">
-        <select name="role">
-            <option value="">All Roles</option>
-            <option value="SUPER_ADMIN" {% if role_filter == 'SUPER_ADMIN' %}selected{% endif %}>Super Admin</option>
-            <option value="ADMIN" {% if role_filter == 'ADMIN' %}selected{% endif %}>Admin</option>
-            <option value="TEACHER" {% if role_filter == 'TEACHER' %}selected{% endif %}>Teacher</option>
-            <option value="STUDENT" {% if role_filter == 'STUDENT' %}selected{% endif %}>Student</option>
-            <option value="PARENT" {% if role_filter == 'PARENT' %}selected{% endif %}>Parent</option>
-        </select>
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-search"></i> Search
-        </button>
-        {% if search_query or role_filter %}
-        <a href="{% url 'user_list' %}" class="btn btn-outline">Clear</a>
-        {% endif %}
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-filter"></i> Search & Filter</h3>
+    </div>
+    <form method="GET">
+        <div class="filter-row">
+            <div class="form-group" style="flex: 2;">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" class="form-control-modern" 
+                           placeholder="Search..." value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <select name="role" class="form-control-modern">
+                    <option value="">All Roles</option>
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="HEAD_TEACHER">Head Teacher</option>
+                    <option value="TEACHER">Teacher</option>
+                    <option value="STUDENT">Student</option>
+                    <option value="PARENT">Parent</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn-primary">Search</button>
+            </div>
+            {% if search_query or role_filter %}
+            <div class="form-group">
+                <a href="{% url 'user_list' %}" class="btn-secondary">Clear</a>
+            </div>
+            {% endif %}
+        </div>
     </form>
 </div>
 
-<div class="data-table-container">
+<!-- Users Table -->
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-users"></i> All Users</h3>
+        <span class="user-count">{{ users|length }} user{{ users|length|pluralize }}</span>
+    </div>
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table-modern">
             <thead>
                 <tr>
                     <th>Username / ADM</th>
@@ -55,48 +76,51 @@
             <tbody>
                 {% for user in users %}
                 <tr>
-                    <td>{{ user.username }}</td>
-                    <td>
+                    <td class="username-cell">{{ user.username }}</td>
+                    <td class="name-cell">
                         {% if user.role == 'STUDENT' and user.student_record_records %}
-                            {{ user.student_record_records.first_name }} {{ user.student_record_records.last_name }}
+                            <strong>{{ user.student_record_records.first_name }} {{ user.student_record_records.last_name }}</strong>
                         {% elif user.first_name or user.last_name %}
-                            {{ user.first_name }} {{ user.last_name }}
+                            <strong>{{ user.first_name }} {{ user.last_name }}</strong>
                         {% else %}
-                            {{ user.get_full_name|default:user.username }}
+                            <strong>{{ user.get_full_name|default:user.username }}</strong>
                         {% endif %}
                     </td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.get_role_display }}</td>
-                    <td>
+                    <td class="email-cell">{{ user.email }}</td>
+                    <td class="role-cell">
+                        <span class="role-badge role-{{ user.role|lower }}">
+                            {{ user.get_role_display }}
+                        </span>
+                    </td>
+                    <td class="status-cell">
                         {% if user.is_active %}
-                            <span class="text-success">Active</span>
+                            <span class="status-badge status-active">
+                                <i class="fas fa-check-circle"></i> Active
+                            </span>
                         {% else %}
-                            <span class="text-danger">Inactive</span>
+                            <span class="status-badge status-inactive">
+                                <i class="fas fa-times-circle"></i> Inactive
+                            </span>
                         {% endif %}
                     </td>
                     <td class="action-buttons">
-                        <a href="{% url 'admin_reset_password' user.id %}" 
-                        onclick="return confirm('Reset password for {{ user.username }}?')"
-                        class="btn btn-warning btn-sm">
+                        <button class="btn-reset" onclick="confirmReset({{ user.id }}, '{{ user.username }}')">
                             <i class="fas fa-key"></i> Reset
-                        </a>
+                        </button>
                         {% if request.user.role == 'SUPER_ADMIN' and user.id != request.user.id %}
-                        <a href="{% url 'delete_user' user.id %}" 
-                        onclick="return confirm('Delete {{ user.username }}? This cannot be undone!')"
-                        class="btn btn-danger btn-sm">
+                        <button class="btn-delete-modern" onclick="confirmDelete({{ user.id }}, '{{ user.username }}')">
                             <i class="fas fa-trash"></i> Delete
-                        </a>
+                        </button>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="table-empty">
-                        <i class="fas fa-users"></i><br>
+                    <td colspan="6" class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <p>No users found</p>
                         {% if search_query %}
-                            No users found matching "{{ search_query }}".
-                        {% else %}
-                            No users found.
+                            <small>No results matching "{{ search_query }}"</small>
                         {% endif %}
                     </td>
                 </tr>
@@ -106,106 +130,403 @@
     </div>
 </div>
 
-<!-- Edit User Modal -->
-<div id="editUserModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Edit User</h2>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-        </div>
-        
-        <form id="editUserForm">
-            {% csrf_token %}
-            <input type="hidden" name="user_id" id="edit_user_id">
-            
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="edit_username" disabled style="background: #f5f5f5;">
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>First Name</label>
-                    <input type="text" name="first_name" id="edit_first_name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Last Name</label>
-                    <input type="text" name="last_name" id="edit_last_name" required>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" id="edit_email" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Phone Number</label>
-                <input type="text" name="phone_number" id="edit_phone">
-            </div>
-            
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" name="is_active" id="edit_is_active"> Active (Can login)
-                </label>
-            </div>
-            
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" name="is_approved" id="edit_is_approved"> Approved
-                </label>
-            </div>
-            
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button type="submit" class="btn btn-success">Save Changes</button>
-                <button type="button" onclick="closeModal()" class="btn btn-outline">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
+<!-- Hidden reset form -->
+<form id="resetForm" method="POST" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<!-- Hidden delete form -->
+<form id="deleteForm" method="POST" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<style>
+/* Modern Card */
+.modern-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-header-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f1f5f9;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.card-header-modern h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-header-modern h3 i {
+    color: #2563eb;
+}
+
+.user-count {
+    font-size: 0.7rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+}
+
+/* Filter Row */
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-row .form-group {
+    margin-bottom: 0;
+}
+
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    z-index: 1;
+}
+
+.search-input-wrapper input {
+    padding-left: 35px !important;
+}
+
+.form-control-modern {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-control-modern:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb, #10b981);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e1;
+}
+
+/* Modern Table */
+.data-table-modern {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table-modern th {
+    padding: 1rem;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.data-table-modern td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+}
+
+.data-table-modern tr:hover {
+    background: #f8fafc;
+}
+
+/* Username Cell */
+.username-cell {
+    font-weight: 600;
+    color: #1e293b;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+.name-cell strong {
+    color: #1e293b;
+}
+
+.email-cell {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Role Badges */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.role-super_admin {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.role-admin {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.role-head_teacher {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.role-teacher {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.role-student {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.role-parent {
+    background: #fce7f3;
+    color: #db2777;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.status-inactive {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-reset {
+    background: #fef3c7;
+    color: #d97706;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
+}
+
+.btn-reset:hover {
+    background: #fde68a;
+    transform: translateY(-1px);
+}
+
+.btn-delete-modern {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
+}
+
+.btn-delete-modern:hover {
+    background: #fecaca;
+    transform: translateY(-1px);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #64748b;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.empty-state small {
+    font-size: 0.7rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modern-card {
+        padding: 1rem;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .filter-row .form-group {
+        width: 100%;
+    }
+    
+    .data-table-modern th,
+    .data-table-modern td {
+        padding: 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-reset, .btn-delete-modern {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .role-badge, .status-badge {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.4rem;
+    }
+}
+
+/* Alert Styles */
+.alert {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #059669;
+    border-left: 3px solid #10b981;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #dc2626;
+    border-left: 3px solid #ef4444;
+}
+
+.alert-warning {
+    background: #fef3c7;
+    color: #d97706;
+    border-left: 3px solid #f59e0b;
+}
+
+.alert-info {
+    background: #dbeafe;
+    color: #2563eb;
+    border-left: 3px solid #3b82f6;
+}
+</style>
 
 <script>
-    const editModal = document.getElementById('editUserModal');
-    
-    function openEditModal(id, username, firstName, lastName, email, phone, role, isActive, isApproved) {
-        document.getElementById('edit_user_id').value = id;
-        document.getElementById('edit_username').value = username;
-        document.getElementById('edit_first_name').value = firstName;
-        document.getElementById('edit_last_name').value = lastName;
-        document.getElementById('edit_email').value = email;
-        document.getElementById('edit_phone').value = phone;
-        document.getElementById('edit_is_active').checked = isActive;
-        document.getElementById('edit_is_approved').checked = isApproved;
-        editModal.style.display = 'flex';
+    function confirmReset(userId, username) {
+        if(confirm(`Reset password for ${username}? Password will be set to "School2026".`)) {
+            const form = document.getElementById('resetForm');
+            form.action = `/reset-password/${userId}/`;
+            form.submit();
+        }
     }
     
-    function closeModal() {
-        editModal.style.display = 'none';
-    }
-    
-    window.onclick = function(e) {
-        if (e.target == editModal) closeModal();
-    }
-    
-    document.getElementById('editUserForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const userId = document.getElementById('edit_user_id').value;
-        const formData = new FormData(this);
-        
-        const response = await fetch(`/edit-user/${userId}/`, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        
-        const data = await response.json();
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert(data.error || 'Error updating user');
+    function confirmDelete(userId, username) {
+        if(confirm(`Delete ${username}? This action cannot be undone!`)) {
+            const form = document.getElementById('deleteForm');
+            form.action = `/delete-user/${userId}/`;
+            form.submit();
         }
     }
 </script>
+
 {% endblock %}

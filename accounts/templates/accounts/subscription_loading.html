@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Processing Payment{% endblock %}
+
+{% block content %}
+
+<div class="payment-processing">
+    <div class="processing-card">
+        <div class="processing-icon">
+            <div class="spinner"></div>
+        </div>
+        <h2>Processing Payment</h2>
+        <div class="payment-details">
+            <div class="detail-row">
+                <span>Amount:</span>
+                <strong>KES {{ amount|floatformat:0 }}</strong>
+            </div>
+            <div class="detail-row">
+                <span>Phone:</span>
+                <strong>{{ phone_number }}</strong>
+            </div>
+        </div>
+        <p class="instruction">Please check your phone and enter M-Pesa PIN</p>
+        <div class="timer">
+            <i class="fas fa-hourglass-half"></i>
+            Time remaining: <span id="seconds">60</span> seconds
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-processing {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.95));
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.processing-card {
+    background: white;
+    border-radius: 32px;
+    padding: 2rem;
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.processing-icon {
+    margin-bottom: 1.5rem;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #10b981;
+    border-right: 4px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.processing-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #1e293b;
+}
+
+.payment-details {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+}
+
+.detail-row span {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.detail-row strong {
+    color: #1e293b;
+    font-size: 0.9rem;
+}
+
+.instruction {
+    color: #475569;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.timer {
+    font-size: 0.8rem;
+    color: #64748b;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.timer i {
+    margin-right: 0.3rem;
+    color: #f59e0b;
+}
+
+.timer span {
+    font-weight: 700;
+    color: #dc2626;
+}
+</style>
+
+<script>
+let paymentId = {{ payment_id }};
+let timeLeft = 60;
+let checkInterval;
+let timerInterval;
+
+function checkPaymentStatus() {
+    fetch(`/accounts/check-subscription-payment/${paymentId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                clearInterval(checkInterval);
+                clearInterval(timerInterval);
+                window.location.href = "{% url 'subscription_dashboard' %}";
+            }
+        })
+        .catch(error => console.log('Error:', error));
+}
+
+function startTimer() {
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('seconds').innerText = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            clearInterval(checkInterval);
+            window.location.href = "{% url 'subscription_dashboard' %}";
+        }
+    }, 1000);
+}
+
+startTimer();
+checkInterval = setInterval(checkPaymentStatus, 2000);
+</script>
+
+{% endblock %}

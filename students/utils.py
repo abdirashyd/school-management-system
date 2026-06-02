@@ -1,6 +1,5 @@
-# students/utils.py
-
 import openpyxl
+from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from django.http import HttpResponse
 from datetime import datetime

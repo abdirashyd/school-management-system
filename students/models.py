@@ -4,6 +4,9 @@ from accounts.models import User
 
 
 class Students(models.Model):
+    # ✅ ADD THIS - School field (which school this student belongs to)
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='students', null=True, blank=True)
+    
     user = models.OneToOneField(
         'accounts.User', 
         on_delete=models.CASCADE, 
@@ -27,24 +30,30 @@ class Students(models.Model):
         null=True,
         related_name='students',
     )
-    GENDER_CH0ICES=(
-        ('MALE','male'),
-        ('FEMALE','female')
+    
+    GENDER_CH0ICES = (
+        ('MALE', 'male'),
+        ('FEMALE', 'female')
     )
+    
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     registration_number = models.CharField(max_length=20, unique=True)
 
     is_active = models.BooleanField(default=True)
     date_enrolled = models.DateTimeField(auto_now_add=True)
-    gender=models.CharField(max_length=10,choices=GENDER_CH0ICES,null=True,blank=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CH0ICES, null=True, blank=True)
     
     last_total_marks = models.FloatField(default=0.0, editable=False)
     last_mean_score = models.FloatField(default=0.0, editable=False)
     address = models.TextField(blank=True, null=True, help_text="Residential address")
     has_leadership = models.BooleanField(default=False)
     medical_condition = models.TextField(blank=True, null=True, help_text="Any underlying medical conditions")
-    
+
+    current_grade = models.ForeignKey('academic.GradeLevel', on_delete=models.SET_NULL, null=True, blank=True)
+    is_graduated = models.BooleanField(default=False)
+    graduation_year = models.IntegerField(null=True, blank=True)
+        
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.registration_number})"
     
@@ -82,14 +91,12 @@ class Students(models.Model):
         """Calculate fee balance for this student"""
         from finance.models import Payement
         
-        if not self.current_class:
-            return 0.0
-        
-        
         # Get total paid
         payments = Payement.objects.filter(student=self)
         total_paid = sum(float(p.amount_paid) for p in payments)
         
+        # Return total paid (or modify based on your needs)
+        # Since fee_amount was removed, just return total_paid or 0
         return total_paid
     
     def get_rank(self):
@@ -132,6 +139,9 @@ class Students(models.Model):
 
 
 class Attendance(models.Model):
+    # ✅ ADD THIS - School field (which school this attendance belongs to)
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='attendances', null=True, blank=True)
+    
     STATUS_CHOICES = (
         ('Present', 'Present'),
         ('Absent', 'Absent'),
@@ -152,7 +162,7 @@ class Attendance(models.Model):
     )
 
     class Meta:
-        unique_together = ('student', 'date')  # One attendance per student per day
+        unique_together = ('student', 'date')
 
     def __str__(self):
         return f"{self.student.first_name} - {self.date} ({self.status})"

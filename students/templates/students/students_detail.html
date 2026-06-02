@@ -1,236 +1,292 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ student.first_name }} {{ student.last_name }}{% endblock %}
+{% block title %}{{ student.first_name }} {{ student.last_name }} | Student Profile{% endblock %}
 
 {% block content %}
 
 <div class="profile-container">
-    <!-- Profile Header -->
-    <div class="profile-header">
-        <div class="profile-avatar">
-            <div class="avatar-large">
-                {{ student.first_name|first }}{{ student.last_name|first }}
-            </div>
-        </div>
-        <div class="profile-info">
-            <h1>{{ student.first_name }} {{ student.last_name }}</h1>
-            <p class="profile-badge">{{ student.registration_number }}</p>
-            <div class="profile-meta">
-                <span><i class="fas fa-calendar-alt"></i> Enrolled: {{ student.date_enrolled|date:"d M Y" }}</span>
-                <span><i class="fas fa-building"></i> Class: {{ student.current_class|default:"Not Assigned" }}</span>
-                <span><i class="fas fa-user-friends"></i> Parent: {% if student.parents %}{{ student.parents.get_full_name|default:student.parents.username }}{% else %}Not assigned{% endif %}</span>
+    <!-- ========== PROFILE HEADER WITH COVER ========== -->
+    <div class="profile-cover">
+        <div class="cover-gradient"></div>
+        <div class="profile-header-content">
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar-large">
+                    {{ student.first_name|first }}{{ student.last_name|first }}
+                </div>
                 {% if student.has_leadership %}
-                <span><i class="fas fa-star"></i> Leadership: Yes</span>
+                <div class="leadership-badge">
+                    <i class="fas fa-star"></i> Leader
+                </div>
                 {% endif %}
             </div>
+            <div class="profile-info-wrapper">
+                <h1>{{ student.first_name }} {{ student.last_name }}</h1>
+                <div class="profile-badges">
+                    <span class="badge badge-primary"><i class="fas fa-id-card"></i> {{ student.registration_number }}</span>
+                    <span class="badge badge-success"><i class="fas fa-calendar-alt"></i> Enrolled: {{ student.date_enrolled|date:"d M Y" }}</span>
+                    <span class="badge badge-info"><i class="fas fa-building"></i> {{ student.current_class|default:"Not Assigned" }}</span>
+                </div>
+                <div class="profile-parent-info">
+                    <i class="fas fa-user-friends"></i> Parent: {% if student.parents %}{{ student.parents.get_full_name|default:student.parents.username }}{% else %}Not assigned{% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="profile-stats">
-        <div class="stat-item">
-            <div class="stat-value">{{ student.get_total_marks|default:"0" }}</div>
-            <div class="stat-label">Total Marks</div>
+    <!-- ========== STATS CARDS ========== -->
+    <div class="stats-grid stats-grid-profile">
+        <div class="stat-card stat-card-profile">
+            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">{{ student.get_total_marks|default:"0" }}</div>
+                <div class="stat-label">Total Marks</div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ student.get_mean_marks|floatformat:1|default:"0.0" }}</div>
-            <div class="stat-label">Mean Score</div>
+        <div class="stat-card stat-card-profile">
+            <div class="stat-icon"><i class="fas fa-percent"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">{{ student.get_mean_marks|floatformat:1|default:"0.0" }}</div>
+                <div class="stat-label">Mean Score</div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-value">{{ student.get_rank|default:"N/A" }}</div>
-            <div class="stat-label">Class Rank</div>
+        <div class="stat-card stat-card-profile">
+            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">{{ student.get_rank|default:"N/A" }}</div>
+                <div class="stat-label">Class Rank</div>
+            </div>
+        </div>
+        <div class="stat-card stat-card-profile">
+            <div class="stat-icon"><i class="fas fa-coins"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">KES {{ student.get_fee_balance|floatformat:0|default:"0" }}</div>
+                <div class="stat-label">Fee Balance</div>
+            </div>
         </div>
     </div>
 
-    <!-- Two Column Layout -->
-    <div class="profile-grid">
-        <!-- Left Column - Results -->
-        <div class="profile-card">
-            <div class="card-header">
-                <h3><i class="fas fa-chart-line"></i> Exam Results</h3>
-                <a href="{% url 'results' %}" class="view-link">View All →</a>
+    <!-- ========== MAIN CONTENT GRID ========== -->
+    <div class="profile-grid-modern">
+        
+        <!-- LEFT COLUMN - Academic Results -->
+        <div class="profile-card-modern">
+            <div class="card-header-modern">
+                <h3><i class="fas fa-graduation-cap"></i> Academic Performance</h3>
+                <a href="{% url 'report_card' %}" class="btn-link">View Full Report →</a>
             </div>
-            <div class="table-wrapper">
-                <table class="profile-table">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Exam</th>
-                            <th>Marks</th>
-                            <th>Grade</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in student.results.all %}
-                        <tr>
-                            <td>{{ result.subject.name }}</td>
-                            <td>{{ result.exam.name }}</td>
-                            <td>{{ result.marks_obtained }}/{{ result.out_of }}</td>
-                            <td>
-                                <span class="grade-badge">{{ result.grades }}</span>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="empty-state-small">No results recorded yet</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            
+            {% if student.results.all %}
+                <div class="results-timeline">
+                    {% regroup student.results.all by exam as exam_results %}
+                    {% for exam_group in exam_results %}
+                        <div class="exam-group">
+                            <div class="exam-header">
+                                <h4><i class="fas fa-calendar-alt"></i> {{ exam_group.grouper.name }}</h4>
+                                <span class="exam-type">{{ exam_group.grouper.get_exam_type_display }}</span>
+                            </div>
+                            <div class="subjects-grid">
+                                {% for result in exam_group.list|slice:":4" %}
+                                <div class="subject-card">
+                                    <div class="subject-name">{{ result.subject.name }}</div>
+                                    <div class="subject-marks">
+                                        <span class="marks">{{ result.marks_obtained }}/{{ result.out_of }}</span>
+                                        <span class="grade-badge grade-{{ result.grades|first|lower }}">{{ result.grades|slice:":3" }}</span>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: {{ result.marks_obtained }}%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if exam_group.list|length > 4 %}
+                            <div class="view-more">
+                                <a href="#" class="text-link">View all subjects →</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state-modern">
+                    <i class="fas fa-chart-line"></i>
+                    <p>No results recorded yet</p>
+                    <span class="empty-subtitle">Results will appear here once available</span>
+                </div>
+            {% endif %}
         </div>
 
-        <!-- Right Column - Attendance & Info -->
-        <div>
-            <!-- Attendance Card -->
-            <div class="profile-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-calendar-check"></i> Recent Attendance</h3>
-                </div>
-                <div class="table-wrapper">
-                    <table class="profile-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for attendance in student.attendances.all|slice:":10" %}
-                            <tr>
-                                <td>{{ attendance.date|date:"d M Y" }}</td>
-                                <td>
-                                    {% if attendance.status == 'Present' %}
-                                        <span class="status-present">✓ Present</span>
-                                    {% elif attendance.status == 'Absent' %}
-                                        <span class="status-absent">✗ Absent</span>
-                                    {% elif attendance.status == 'Late' %}
-                                        <span class="status-late">⏰ Late</span>
-                                    {% else %}
-                                        <span class="status-excused">ℹ Excused</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ attendance.remarks|default:"-" }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="empty-state-small">No attendance records yet</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Personal Info Card (UPDATED with new fields) -->
-            <div class="profile-card">
-                <div class="card-header">
+        <!-- RIGHT COLUMN - Personal Info & Attendance -->
+        <div class="profile-right-column">
+            
+            <!-- Personal Information Card -->
+            <div class="profile-card-modern">
+                <div class="card-header-modern">
                     <h3><i class="fas fa-user-circle"></i> Personal Information</h3>
+                    {% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'ADMIN' %}
+                    <a href="#" class="btn-edit"><i class="fas fa-edit"></i> Edit</a>
+                    {% endif %}
                 </div>
-                <div class="info-list">
-                    <div class="info-row">
-                        <span class="info-label">Full Name:</span>
-                        <span class="info-value">{{ student.first_name }} {{ student.last_name }}</span>
+                
+                <div class="info-grid-modern">
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-user"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Full Name</span>
+                            <span class="info-value">{{ student.first_name }} {{ student.last_name }}</span>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Admission Number:</span>
-                        <span class="info-value">{{ student.registration_number }}</span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-id-card"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Admission Number</span>
+                            <span class="info-value">{{ student.registration_number }}</span>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Gender:</span>
-                        <span class="info-value">{{ student.gender|default:"Not specified"|title }}</span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-venus-mars"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Gender</span>
+                            <span class="info-value">{{ student.gender|default:"Not specified"|title }}</span>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Class:</span>
-                        <span class="info-value">{{ student.current_class|default:"Not Assigned" }}</span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-building"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Class</span>
+                            <span class="info-value">{{ student.current_class|default:"Not Assigned" }}</span>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Date Enrolled:</span>
-                        <span class="info-value">{{ student.date_enrolled|date:"d M Y" }}</span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-calendar-check"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Date Enrolled</span>
+                            <span class="info-value">{{ student.date_enrolled|date:"d M Y" }}</span>
+                        </div>
                     </div>
-                    <!-- NEW: Leadership -->
-                    <div class="info-row">
-                        <span class="info-label">Leadership Position:</span>
-                        <span class="info-value">
-                            {% if student.has_leadership %}
-                                <span class="leadership-yes"><i class="fas fa-star"></i> Yes</span>
-                            {% else %}
-                                <span class="leadership-no">No</span>
-                            {% endif %}
-                        </span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-star"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Leadership Position</span>
+                            <span class="info-value">
+                                {% if student.has_leadership %}
+                                    <span class="status-badge status-leader"><i class="fas fa-check"></i> Yes</span>
+                                {% else %}
+                                    <span class="status-badge status-no">No</span>
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
-                    <!-- NEW: Address -->
-                    <div class="info-row">
-                        <span class="info-label">Residence:</span>
-                        <span class="info-value">{{ student.address|default:"Not provided" }}</span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-home"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Residence</span>
+                            <span class="info-value">{{ student.address|default:"Not provided" }}</span>
+                        </div>
                     </div>
-                    <!-- NEW: Medical Condition -->
-                    <div class="info-row">
-                        <span class="info-label">Medical Condition:</span>
-                        <span class="info-value">
-                            {% if student.medical_condition %}
-                                <span class="medical-info">{{ student.medical_condition }}</span>
-                            {% else %}
-                                <span class="text-muted">None reported</span>
-                            {% endif %}
-                        </span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-notes-medical"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Medical Condition</span>
+                            <span class="info-value">
+                                {% if student.medical_condition %}
+                                    <span class="medical-note">{{ student.medical_condition }}</span>
+                                {% else %}
+                                    <span class="text-muted">None reported</span>
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Parent/Guardian:</span>
-                        <span class="info-value">
-                            {% if student.parents %}
-                                {{ student.parents.get_full_name|default:student.parents.username }}
-                                <br>
-                                <small>{{ student.parents.email }}</small>
-                                <br>
-                                <small>Phone: {{ student.parents.phone_number|default:"-" }}</small>
-                            {% else %}
-                                Not assigned
-                            {% endif %}
-                        </span>
+                    <div class="info-item">
+                        <div class="info-icon"><i class="fas fa-user-friends"></i></div>
+                        <div class="info-details">
+                            <span class="info-label">Parent/Guardian</span>
+                            <span class="info-value">
+                                {% if student.parents %}
+                                    <strong>{{ student.parents.get_full_name|default:student.parents.username }}</strong>
+                                    <br><small>{{ student.parents.email }}</small>
+                                    <br><small><i class="fas fa-phone"></i> {{ student.parents.phone_number|default:"-" }}</small>
+                                {% else %}
+                                    Not assigned
+                                {% endif %}
+                            </span>
+                        </div>
                     </div>
                 </div>
-                {% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'ADMIN' %}
-                <div class="card-actions">
-                    <a href="#" class="btn-edit-profile">Edit Profile</a>
-                    <a href="#" class="btn-assign-parent">Assign Parent</a>
+            </div>
+
+            <!-- Attendance Card -->
+            <div class="profile-card-modern">
+                <div class="card-header-modern">
+                    <h3><i class="fas fa-calendar-check"></i> Attendance Record</h3>
+                    <a href="{% url 'attendance_report' %}" class="btn-link">View All →</a>
                 </div>
+                
+                {% if student.attendances.all %}
+                    <div class="attendance-timeline">
+                        {% for attendance in student.attendances.all|slice:":5" %}
+                        <div class="attendance-item">
+                            <div class="attendance-date">{{ attendance.date|date:"d M Y" }}</div>
+                            <div class="attendance-status">
+                                {% if attendance.status == 'Present' %}
+                                    <span class="status-badge status-present"><i class="fas fa-check-circle"></i> Present</span>
+                                {% elif attendance.status == 'Absent' %}
+                                    <span class="status-badge status-absent"><i class="fas fa-times-circle"></i> Absent</span>
+                                {% elif attendance.status == 'Late' %}
+                                    <span class="status-badge status-late"><i class="fas fa-clock"></i> Late</span>
+                                {% else %}
+                                    <span class="status-badge status-excused"><i class="fas fa-info-circle"></i> Excused</span>
+                                {% endif %}
+                            </div>
+                            <div class="attendance-remark">{{ attendance.remarks|default:"-" }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if student.attendances.all|length > 5 %}
+                    <div class="view-more-footer">
+                        <a href="#" class="text-link">View all attendance records →</a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="empty-state-small">
+                        <i class="fas fa-calendar"></i>
+                        <p>No attendance records yet</p>
+                    </div>
                 {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="profile-card-modern action-card">
+                <div class="card-header-modern">
+                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                </div>
+                <div class="action-buttons-grid">
+                    <a href="#" class="action-btn">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Record Payment</span>
+                    </a>
+                    <a href="#" class="action-btn">
+                        <i class="fas fa-edit"></i>
+                        <span>Edit Profile</span>
+                    </a>
+                    <a href="#" class="action-btn">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Download Report</span>
+                    </a>
+                    <a href="#" class="action-btn">
+                        <i class="fas fa-envelope"></i>
+                        <span>Send Message</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.leadership-yes {
-    color: #856404;
-    background: #fff3cd;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    display: inline-block;
-}
 
-.leadership-no {
-    color: #6c757d;
-    background: #e9ecef;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    display: inline-block;
-}
-
-.medical-info {
-    background: #e8d4f8;
-    color: #6f42c1;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    display: inline-block;
-}
-
-.text-muted {
-    color: #6c757d;
-}
 </style>
 
 {% endblock %}

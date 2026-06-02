@@ -6,18 +6,19 @@ from django.conf import settings
 
 
 class Classroom(models.Model):
-    name=models.CharField(max_length=50)
-    stream=models.CharField(max_length=50,null=True,blank=True)
-    fee_amount=models.DecimalField(max_digits=10,decimal_places=2,default=0.00)
-    subjects=models.ManyToManyField('Subject',related_name='classrooms',blank=True)
+    # School field - which school this classroom belongs to
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='classrooms', null=True, blank=True)
+    
+    name = models.CharField(max_length=50)
+    stream = models.CharField(max_length=50, null=True, blank=True)
+    subjects = models.ManyToManyField('Subject', related_name='classrooms', blank=True)
 
-
-    class_teacher=models.OneToOneField(
+    class_teacher = models.OneToOneField(
         'accounts.User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        limit_choices_to={'role':'TEACHER'},
+        limit_choices_to={'role': 'TEACHER'},
         related_name='manage_classes'
     )
 
@@ -25,21 +26,24 @@ class Classroom(models.Model):
         if self.stream:
             return f"{self.name} {self.stream}"
         return self.name
+    
     def get_students_count(self):
         return self.students.count()
     
     def get_capacity_status(self):
-        count=self.get_students_count()
-        if count>=70:
-            return"Full"
-        elif count>=55:
+        count = self.get_students_count()
+        if count >= 70:
+            return "Full"
+        elif count >= 55:
             return "Nearly Full"
         else:
-            return"Available"
-
+            return "Available"
 
 
 class Teacher(models.Model):
+    # School field - which school this teacher belongs to
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='teachers', null=True, blank=True)
+    
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
@@ -47,7 +51,7 @@ class Teacher(models.Model):
         null=True,
         blank=True,
     )
-    name=models.CharField(max_length=200)
+    name = models.CharField(max_length=200)
     tsc_number = models.CharField(max_length=50, unique=True)
    
     phone = models.CharField(max_length=15)
@@ -58,59 +62,93 @@ class Teacher(models.Model):
     date_of_joining = models.DateField(blank=True, null=True)
     
     def __str__(self):
-        return self.name if self.name else'Unnamed Teacher'
-    
+        return self.name if self.name else 'Unnamed Teacher'
 
 
 class Subject(models.Model):
-    name=models.CharField(max_length=100)
-    code=models.CharField(max_length=20,unique=True)
-    description=models.TextField(blank=True,null=True)
-    teacher=models.ForeignKey(
+    # NO school field - Super Admin controls subjects centrally
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True, null=True)
+    
+    # Optional: Default teacher (can be overridden by SubjectAllocation)
+    teacher = models.ForeignKey(
         'accounts.User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        limit_choices_to={'role':'TEACHER'},
+        limit_choices_to={'role': 'TEACHER'},
         related_name='subjects_taught'
     )
 
     def __str__(self):
-        return f"{self.name}({self.code})"
-    
+        return f"{self.name} ({self.code})"
 
 
 class Exam(models.Model):
-    EXAM_TYPE=(
-        ('OPENER','opener Exam'),
-        ('MIDTERM','midterm Exam'),
-        ('ENDTERM','end of term'),
+    EXAM_TYPE = (
+        ('OPENER', 'Opener Exam'),
+        ('MIDTERM', 'Midterm Exam'),
+        ('ENDTERM', 'End of Term'),
     )
-    name=models.CharField(max_length=100)
-    exam_type=models.CharField(max_length=20,choices=EXAM_TYPE)
-    date_started=models.DateTimeField()
+    # ADD THIS FIELD
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, 
+                               related_name='exams', null=True, blank=True)
+    name = models.CharField(max_length=100)
+    exam_type = models.CharField(max_length=20, choices=EXAM_TYPE)
+    date_started = models.DateTimeField()
+    max_marks = models.IntegerField(default=100)
 
     def __str__(self):
-        return f"{self.name}{(self.get_exam_type_display())}"
-    
+        return f"{self.name} ({self.get_exam_type_display()})"
 
 
-    
-
-    
 class Results(models.Model):
-    student=models.ForeignKey('students.Students',on_delete=models.CASCADE,related_name='results')
-    subject=models.ForeignKey('academic.Subject',on_delete=models.CASCADE)
-    exam=models.ForeignKey( Exam,on_delete=models.CASCADE)
+    # School field - for filtering by school
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='results', null=True, blank=True)
+    
+    student = models.ForeignKey('students.Students', on_delete=models.CASCADE, related_name='results')
+    subject = models.ForeignKey('academic.Subject', on_delete=models.CASCADE)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
 
-    marks_obtained=models.PositiveIntegerField()
-    out_of=models.PositiveIntegerField(default=100)
+    marks_obtained = models.PositiveIntegerField()
+    out_of = models.PositiveIntegerField(default=100)
 
-    teacher_remark=models.TextField(blank=True,null=True)
-    create_at=models.DateTimeField(auto_now_add=True)
-        
+    teacher_remark = models.TextField(blank=True, null=True)
+    create_at = models.DateTimeField(auto_now_add=True)
+
+    STATUS_CHOICES = (
+        ('DRAFT', 'Draft - Not Submitted'),
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('PUBLISHED', 'Published - Visible'),
+        ('EXPIRED', 'Expired'),
+    )
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='submitted_results'
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_results'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+    
     class Meta:
-        unique_together=('student','subject','exam')
+        unique_together = ('student', 'subject', 'exam')
 
     @property
     def grades(self):
@@ -119,11 +157,11 @@ class Results(models.Model):
         if percentage >= 80:
             return "E (Exceeding Expectations)"
         elif percentage >= 70:
-            return "D (Meeting Expectations)"
+            return "D- (Meeting Expectations)"
         elif percentage >= 60:
             return "D (Meeting Expectations)"
         elif percentage >= 50:
-            return "C (Approaching Expectations)"
+            return "C- (Approaching Expectations)"
         elif percentage >= 40:
             return "C (Approaching Expectations)"
         elif percentage >= 30:
@@ -132,15 +170,14 @@ class Results(models.Model):
             return "A (Below Expectations)"
 
     def __str__(self):
-        return f"{self.student.first_name}-{self.subject.name}:{self.marks_obtained}/{self.out_of}"
+        return f"{self.student.first_name} - {self.subject.name}: {self.marks_obtained}/{self.out_of}"
     
     def clean(self):
-        # The Integrity Guard: Marks cannot exceed the 'out_of' value
         if self.marks_obtained > self.out_of:
             raise ValidationError(
                 f"Wait! Marks ({self.marks_obtained}) cannot be higher than the total ({self.out_of})."
             )
-        
+
 
 def download_marks_sheet(modeladmin, request, queryset):
     """Download CSV template for marks entry"""
@@ -157,7 +194,8 @@ def download_marks_sheet(modeladmin, request, queryset):
         for s in students:
             writer.writerow([s.id, s.registration_number, f"{s.first_name} {s.last_name}", ""])
     
-    return response  # ✅ CORRECT - returns after processing ALL exams
+    return response
+
 
 def get_class_rankings(classroom_id, exam_id):
     """Calculate rankings for a class in a specific exam"""
@@ -186,29 +224,59 @@ def get_class_rankings(classroom_id, exam_id):
 
     return rank_list
 
-# academic/models.py - Add this model
 
-class Schedule(models.Model):
-    DAY_CHOICES = [
-        ('MONDAY', 'Monday'),
-        ('TUESDAY', 'Tuesday'),
-        ('WEDNESDAY', 'Wednesday'),
-        ('THURSDAY', 'Thursday'),
-        ('FRIDAY', 'Friday'),
-        ('SATURDAY', 'Saturday'),
-    ]
-    
-    day = models.CharField(max_length=10, choices=DAY_CHOICES)
-    subject = models.ForeignKey('Subject', on_delete=models.CASCADE, related_name='schedules')
-    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE, related_name='schedules')
-    classroom = models.ForeignKey('Classroom', on_delete=models.CASCADE, related_name='schedules')
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    room = models.CharField(max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+class GradeLevel(models.Model):
+    """Grade configuration for CBC curriculum (Grade 1 to Grade 12)"""
+    grade_number = models.IntegerField(unique=True)
+    grade_name = models.CharField(max_length=50)
+    level = models.CharField(max_length=20, choices=[
+        ('PRIMARY', 'Primary School'),
+        ('JUNIOR', 'Junior School'),
+        ('SENIOR', 'Senior School'),
+    ], default='PRIMARY')
+    next_grade = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    is_graduation_grade = models.BooleanField(default=False)
     
     def __str__(self):
-        return f"{self.get_day_display()} - {self.subject.name} - {self.start_time} - {self.classroom.name}"
+        return f"Grade {self.grade_number}"
     
     class Meta:
-        ordering = ['day', 'start_time']
+        ordering = ['grade_number']
+
+
+class PromotionHistory(models.Model):
+    """Track student promotion history"""
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='promotion_histories', null=True, blank=True)
+    
+    student = models.ForeignKey('students.Students', on_delete=models.CASCADE, related_name='promotion_history')
+    from_grade = models.ForeignKey(GradeLevel, on_delete=models.SET_NULL, null=True, related_name='promotions_from')
+    to_grade = models.ForeignKey(GradeLevel, on_delete=models.SET_NULL, null=True, related_name='promotions_to')
+    promoted_at = models.DateTimeField(auto_now_add=True)
+    promoted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    academic_year = models.CharField(max_length=20, blank=True, null=True)
+    
+    def __str__(self):
+        if self.to_grade:
+            return f"{self.student.first_name} - Grade {self.from_grade.grade_number} → Grade {self.to_grade.grade_number}"
+        return f"{self.student.first_name} - Graduated"
+    
+    class Meta:
+        ordering = ['-promoted_at']
+
+
+# ========== NEW: SUBJECT ALLOCATION MODEL ==========
+class SubjectAllocation(models.Model):
+    """Which teacher teaches which subject in which class for which school"""
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='subject_allocations')
+    classroom = models.ForeignKey('Classroom', on_delete=models.CASCADE, related_name='subject_allocations')
+    subject = models.ForeignKey('Subject', on_delete=models.CASCADE, related_name='allocations')
+    teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE, related_name='subject_allocations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['school', 'classroom', 'subject']  # One teacher per subject per class
+        ordering = ['classroom__name', 'subject__name']
+    
+    def __str__(self):
+        return f"{self.classroom.name} - {self.subject.name} → {self.teacher.name}"

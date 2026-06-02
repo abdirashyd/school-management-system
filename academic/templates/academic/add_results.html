@@ -1,69 +1,147 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Add Results{% endblock %}
+{% block title %}Enter Results{% endblock %}
 
 {% block content %}
 
-<div class="register-container">
-    <div class="register-header">
-        <h1>Enter Student Marks</h1>
-        <p>Grades will be calculated automatically based on the score.</p>
+<div class="dashboard-header">
+    <h1>📝 Enter Student Results</h1>
+    <p>Select exam and class, then enter marks for all subjects at once</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert-modern alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filter Section -->
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-filter"></i> Select Exam and Class</h3>
     </div>
-
-    <div class="register-form active">
-        <form method="POST">
-            {% csrf_token %}
-
+    <form method="GET" action="{% url 'add_results' %}" id="filterForm">
+        <div class="filter-row">
             <div class="form-group">
-                <label>Student Name <span class="required">*</span></label>
-                <select name="student" required>
-                    <option value="">-- Select Student --</option>
-                    {% for student in students %}
-                        <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }} ({{ student.registration_number }})</option>
+                <label>Select Exam</label>
+                <select name="exam" class="form-control-modern" required>
+                    <option value="">-- Select Exam --</option>
+                    {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam == exam.id|stringformat:"s" %}selected{% endif %}>
+                            {{ exam.name }} ({{ exam.get_exam_type_display }}) - {{ exam.date_started|date:"d M Y" }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Subject <span class="required">*</span></label>
-                    <select name="subject" required>
-                        {% for sub in subjects %}
-                            <option value="{{ sub.id }}">{{ sub.name }} ({{ sub.code }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Exam <span class="required">*</span></label>
-                    <select name="exam" required>
-                        <option value="">-- Select Exam --</option>
-                        {% for exam in exams %}
-                            <option value="{{ exam.id }}">{{ exam.name }} ({{ exam.get_exam_type_display }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
             <div class="form-group">
-                <label>Marks (0 - 100) <span class="required">*</span></label>
-                <input type="number" name="marks_obtained" required placeholder="e.g., 85" min="0" max="100">
+                <label>Select Class</label>
+                <select name="class" class="form-control-modern" required>
+                    <option value="">-- Select Class --</option>
+                    {% for class in classes %}
+                        <option value="{{ class.id }}" {% if selected_class == class.id|stringformat:"s" %}selected{% endif %}>
+                            {{ class.name }} {% if class.stream %}({{ class.stream }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
-
-            <div class="form-group">
-                <label>Teacher's Remarks</label>
-                <textarea name="teacher_remark" rows="3" placeholder="Optional comment..."></textarea>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn-primary">Load Students</button>
             </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-save"></i> Submit Result
-                </button>
-                <a href="{% url 'results' %}" class="btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
+
+<!-- Results Entry Matrix -->
+{% if students and selected_class and selected_exam %}
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-edit"></i> Enter Marks for {{ students|length }} Students</h3>
+        <small>Enter marks (0-100) for each subject</small>
+    </div>
+    
+    <form method="POST" action="{% url 'add_results' %}" id="resultsForm">
+        {% csrf_token %}
+        <input type="hidden" name="class_id" value="{{ selected_class }}">
+        <input type="hidden" name="exam_id" value="{{ selected_exam }}">
+        
+        <div class="table-responsive">
+            <table class="results-entry-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Adm No</th>
+                        {% for subject in subjects %}
+                            <th>{{ subject.name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.first_name }} {{ student.last_name }}</td>
+                        <td>{{ student.registration_number }}</td>
+                        {% for subject in subjects %}
+                            {% with key=student.id|stringformat:"s"|add:"_"|add:subject.id|stringformat:"s" %}
+                            <td>
+                                <input type="number" name="marks_{{ student.id }}_{{ subject.id }}" 
+                                       value="{% for result_id, result_data in existing_results.items %}{% if result_id == key %}{{ result_data.marks }}{% endif %}{% endfor %}"
+                                       min="0" max="100" class="marks-input" placeholder="Marks">
+                                <input type="text" name="remark_{{ student.id }}_{{ subject.id }}" 
+                                       value="{% for result_id, result_data in existing_results.items %}{% if result_id == key %}{{ result_data.remark }}{% endif %}{% endfor %}"
+                                       class="remark-input" placeholder="Remark">
+                            </td>
+                            {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="form-actions-modern">
+            <button type="submit" name="action" value="save_draft" class="btn-draft"><i class="fas fa-save"></i> Save as Draft</button>
+            <button type="submit" name="action" value="submit_approval" class="btn-approval"><i class="fas fa-paper-plane"></i> Submit for Approval</button>
+            {% if user_role == 'SUPER_ADMIN' %}
+            <button type="submit" name="action" value="publish" class="btn-success"><i class="fas fa-check"></i> Publish Immediately</button>
+            {% endif %}
+            <a href="{% url 'add_results' %}" class="btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+{% elif selected_class and selected_exam %}
+<div class="modern-card"><div class="empty-state">No students found in this class. <a href="{% url 'register_page' %}">Add Students</a></div></div>
+{% endif %}
+
+<style>
+.filter-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.filter-row .form-group { flex: 1; min-width: 150px; }
+.form-control-modern { width: 100%; padding: 0.7rem 1rem; border: 1.5px solid #e2e8f0; border-radius: 16px; font-size: 0.85rem; }
+.results-entry-table { width: 100%; border-collapse: collapse; }
+.results-entry-table th { padding: 0.8rem; background: #f8fafc; font-size: 0.7rem; font-weight: 600; color: #64748b; text-align: center; border: 1px solid #e2e8f0; }
+.results-entry-table td { padding: 0.8rem; border: 1px solid #e2e8f0; text-align: center; }
+.marks-input { width: 70px; padding: 0.4rem; text-align: center; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.8rem; }
+.remark-input { width: 100px; padding: 0.4rem; margin-top: 0.3rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.7rem; }
+.form-actions-modern { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+.btn-draft { background: #64748b; color: white; padding: 0.6rem 1.2rem; border-radius: 40px; border: none; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+.btn-approval { background: #f59e0b; color: white; padding: 0.6rem 1.2rem; border-radius: 40px; border: none; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+.alert-modern { padding: 0.75rem 1rem; border-radius: 16px; margin-bottom: 1rem; }
+.alert-success { background: #d1fae5; color: #059669; }
+.alert-error { background: #fee2e2; color: #dc2626; }
+@media (max-width: 768px) {
+    .marks-input { width: 55px; font-size: 0.7rem; }
+    .remark-input { width: 70px; font-size: 0.65rem; }
+    .form-actions-modern { flex-direction: column; }
+    .form-actions-modern button, .form-actions-modern a { width: 100%; justify-content: center; }
+}
+</style>
+
+<script>
+document.querySelectorAll('.btn-approval').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        if (!confirm('Submit ALL results for approval? You cannot edit until approved.')) e.preventDefault();
+    });
+});
+</script>
 
 {% endblock %}

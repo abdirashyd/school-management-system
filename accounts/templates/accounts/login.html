@@ -3,29 +3,457 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Login | EduNexus</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
-<body class="login-body">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<div class="login-wrapper">
-    <div class="login-card">
-        <div class="login-logo">
-            <i class="fas fa-graduation-cap"></i>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e8f5e9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        /* Toast Container */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            min-width: 280px;
+            max-width: 350px;
+            background: white;
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideInRight 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.hide {
+            animation: slideOutUp 0.3s forwards;
+        }
+
+        @keyframes slideOutUp {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-100%); opacity: 0; }
+        }
+
+        .toast-success { border-left: 4px solid #10b981; }
+        .toast-error { border-left: 4px solid #ef4444; }
+        .toast-warning { border-left: 4px solid #f59e0b; }
+        .toast-info { border-left: 4px solid #3b82f6; }
+
+        .toast-icon { font-size: 1.25rem; }
+        .toast-success .toast-icon { color: #10b981; }
+        .toast-error .toast-icon { color: #ef4444; }
+        .toast-warning .toast-icon { color: #f59e0b; }
+        .toast-info .toast-icon { color: #3b82f6; }
+
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: 600; font-size: 0.8rem; margin-bottom: 2px; }
+        .toast-message { font-size: 0.7rem; color: #6b7280; }
+
+        .toast-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 1rem;
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 100%;
+        }
+
+        .toast-progress-bar {
+            height: 100%;
+            width: 100%;
+            animation: progress 3s linear forwards;
+        }
+
+        @keyframes progress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        /* Login Container */
+        .login-container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        /* Left Side - Branding */
+        .login-brand {
+            flex: 1;
+            background: linear-gradient(135deg, #2563eb 0%, #10b981 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-brand::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+        }
+
+        .login-brand::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -20%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-logo {
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-logo i {
+            font-size: 2rem;
+        }
+
+        .brand-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .brand-features {
+            list-style: none;
+            margin-top: 2rem;
+        }
+
+        .brand-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .brand-features li i {
+            font-size: 1.1rem;
+        }
+
+        .brand-footer {
+            position: relative;
+            z-index: 1;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2rem;
+        }
+
+        /* Right Side - Login Form */
+        .login-form-side {
+            flex: 1;
+            padding: 3rem;
+            background: white;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-header p {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .input-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 2.5rem;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 1rem;
+        }
+
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .remember-me input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #10b981;
+        }
+
+        .forgot-link {
+            font-size: 0.8rem;
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            color: white;
+            border: none;
+            padding: 0.9rem;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .login-footer p {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .login-footer a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+                max-width: 450px;
+            }
+            
+            .login-brand {
+                padding: 2rem;
+                text-align: center;
+            }
+            
+            .brand-title {
+                font-size: 1.75rem;
+            }
+            
+            .brand-features {
+                display: none;
+            }
+            
+            .login-form-side {
+                padding: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .login-form-side {
+                padding: 1.5rem;
+            }
+            
+            .form-header h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Toast Notification Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Django Messages (hidden, converted to toasts) -->
+{% if messages %}
+    <div class="messages" style="display: none;">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="login-container">
+    <!-- Left Side - Branding -->
+    <div class="login-brand">
+        <div class="brand-content">
+            <div class="brand-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>EduNexus</span>
+            </div>
+            <h1 class="brand-title">Welcome Back</h1>
+            <p class="brand-subtitle">Sign in to continue your educational journey</p>
+            <ul class="brand-features">
+                <li><i class="fas fa-chart-line"></i> Track academic progress</li>
+                <li><i class="fas fa-credit-card"></i> Manage payments easily</li>
+                <li><i class="fas fa-bell"></i> Get real-time notifications</li>
+                <li><i class="fas fa-cloud"></i> Access anywhere, anytime</li>
+            </ul>
         </div>
-        
-        <h1>Welcome Back</h1>
-        <p class="login-subtitle">Sign in to continue to EduNexus</p>
+        <div class="brand-footer">
+            <p>© 2026 EduNexus. All rights reserved.</p>
+        </div>
+    </div>
+
+    <!-- Right Side - Login Form (No Icons) -->
+    <div class="login-form-side">
+        <div class="form-header">
+            <h2>Sign In</h2>
+            <p>Enter your credentials to access your account</p>
+        </div>
 
         <form method="POST" action="{% url 'login' %}">
             {% csrf_token %}
             
             <div class="input-group">
                 <label>Username / Admission Number</label>
-                <input type="text" name="username" placeholder="Enter your username" required>
+                <input type="text" name="username" placeholder="Enter your username" required autocomplete="off">
             </div>
 
             <div class="input-group">
@@ -33,7 +461,7 @@
                 <div class="password-wrapper">
                     <input type="password" name="password" id="password" placeholder="Enter your password" required>
                     <button type="button" class="toggle-password" onclick="togglePassword()">
-                        <i class="far fa-eye"></i>
+                        <i class="far fa-eye" id="toggleIcon"></i>
                     </button>
                 </div>
             </div>
@@ -45,7 +473,9 @@
                 <a href="#" class="forgot-link">Forgot password?</a>
             </div>
 
-            <button type="submit" class="login-btn">Sign In</button>
+            <button type="submit" class="login-btn">
+                <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+            </button>
         </form>
 
         <div class="login-footer">
@@ -55,19 +485,89 @@
 </div>
 
 <script>
+    // Toggle password visibility
     function togglePassword() {
         const password = document.getElementById('password');
-        const toggle = document.querySelector('.toggle-password i');
+        const toggleIcon = document.getElementById('toggleIcon');
         if (password.type === 'password') {
             password.type = 'text';
-            toggle.classList.remove('fa-eye');
-            toggle.classList.add('fa-eye-slash');
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
         } else {
             password.type = 'password';
-            toggle.classList.remove('fa-eye-slash');
-            toggle.classList.add('fa-eye');
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
         }
     }
+
+    // Toast function
+    let lastToastMessage = '';
+    let lastToastTime = 0;
+
+    function showToast(message, type = 'success', title = '') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const now = Date.now();
+        if (lastToastMessage === message && (now - lastToastTime) < 2000) return;
+        lastToastMessage = message;
+        lastToastTime = now;
+        
+        const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notification' };
+        const finalTitle = title || titles[type] || 'Notification';
+        
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let iconClass = 'fa-check-circle';
+        let progressColor = '#10b981';
+        if (type === 'success') {
+            iconClass = 'fa-check-circle';
+            progressColor = '#10b981';
+        } else if (type === 'error') {
+            iconClass = 'fa-times-circle';
+            progressColor = '#ef4444';
+        } else if (type === 'warning') {
+            iconClass = 'fa-exclamation-triangle';
+            progressColor = '#f59e0b';
+        } else if (type === 'info') {
+            iconClass = 'fa-info-circle';
+            progressColor = '#3b82f6';
+        }
+        
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fas ${iconClass}"></i></div>
+            <div class="toast-content">
+                <div class="toast-title">${finalTitle}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" onclick="this.closest('.toast').remove()"><i class="fas fa-times"></i></button>
+            <div class="toast-progress"><div class="toast-progress-bar" style="background: ${progressColor}"></div></div>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    // Convert Django messages to toasts
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            const messages = document.querySelectorAll('.alert');
+            messages.forEach(msg => {
+                let type = 'info';
+                let message = msg.innerText;
+                if (msg.classList.contains('alert-success')) type = 'success';
+                else if (msg.classList.contains('alert-error')) type = 'error';
+                else if (msg.classList.contains('alert-warning')) type = 'warning';
+                showToast(message, type);
+                msg.remove();
+            });
+        }, 100);
+    });
 </script>
 
 </body>

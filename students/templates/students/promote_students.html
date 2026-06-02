@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Promote Students{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>📚 End of Year Promotion</h1>
+    <p>Move all students to the next grade for the new academic year</p>
+</div>
+
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-calendar-alt"></i> Academic Year: {{ academic_year }}</h3>
+    </div>
+    <p>This will promote all active students to the next grade level.</p>
+    <p><strong>⚠️ Grade 12 students will be marked as GRADUATED.</strong></p>
+</div>
+
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-chart-line"></i> Students Summary</h3>
+    </div>
+    <div class="total-students">
+        <strong>Total Active Students:</strong> {{ total_students }}
+    </div>
+    
+    <div class="grade-breakdown">
+        <h4>Breakdown by Grade:</h4>
+        {% for grade_num, students in students_by_grade.items %}
+            <div class="grade-row">
+                <span class="grade-name">
+                    {% if grade_num == 'no_grade' %}
+                        ⚠️ No Grade Assigned
+                    {% else %}
+                        Grade {{ grade_num }}
+                    {% endif %}
+                </span>
+                <span class="grade-count">{{ students|length }} student{{ students|length|pluralize }}</span>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="warning-card">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>Warning:</strong> This action cannot be undone. 
+    All students will be moved to the next grade permanently.
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="form-actions" style="margin-top: 1rem;">
+        <button type="submit" class="btn-promote" onclick="return confirm('Promote ALL students to the next grade? This cannot be undone!')">
+            <i class="fas fa-arrow-up"></i> Promote All Students
+        </button>
+    </div>
+</form>
+
+<div class="info-note">
+    <i class="fas fa-info-circle"></i>
+    Note: Grade 12 students will be marked as "Graduated" and will no longer appear as active students.
+</div>
+
+<style>
+/* Promotion specific styles - add to your style.css or keep here */
+.total-students {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.grade-breakdown {
+    margin-top: 1rem;
+}
+
+.grade-breakdown h4 {
+    margin-bottom: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.grade-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.grade-name {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--dark);
+}
+
+.grade-count {
+    font-size: 0.8rem;
+    color: var(--gray);
+    background: var(--gray-light);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+}
+
+.warning-card {
+    background: #fef3c7;
+    border-left: 4px solid var(--warning);
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: #92400e;
+}
+
+.warning-card i {
+    font-size: 1.2rem;
+    color: var(--warning);
+}
+
+.btn-promote {
+    background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+    color: white;
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: 40px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-promote:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, var(--secondary-dark), var(--secondary));
+}
+
+.info-note {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--gray-light);
+    border-radius: 16px;
+    font-size: 0.75rem;
+    color: var(--gray);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.info-note i {
+    color: var(--info);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .grade-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    
+    .grade-count {
+        align-self: flex-start;
+    }
+    
+    .warning-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .btn-promote {
+        padding: 0.7rem 1.5rem;
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+{% endblock %}

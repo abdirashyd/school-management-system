@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Schools{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>🏫 Schools</h1>
+    <p>Manage all schools in the system</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>All Schools</h3>
+        <a href="{% url 'super_admin_add_school' %}" class="btn-add">+ Add School</a>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>School Name</th>
+                    <th>Code</th>
+                    <th>Students</th>
+                    <th>Teachers</th>
+                    <th>Revenue</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for school in schools %}
+                <tr>
+                    <td><strong>{{ school.name }}</strong><br><small>{{ school.email }}</small></td>
+                    <td><code>{{ school.code }}</code></td>
+                    <td>{{ school.student_count }}</td>
+                    <td>{{ school.teacher_count }}</td>
+                    <td>KES {{ school.payment_total|floatformat:0 }}</td>
+                    <td>
+                        <a href="{% url 'super_admin_school_detail' school.id %}" class="btn-view">View</a>
+                        <a href="{% url 'super_admin_delete_school' school.id %}" class="btn-delete" onclick="return confirm('Delete?')">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state">No schools. <a href="{% url 'super_admin_add_school' %}">Add one</a></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.btn-view { background: #dbeafe; color: #2563eb; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; }
+.btn-delete { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; margin-left: 5px; }
+</style>
+
+{% endblock %}

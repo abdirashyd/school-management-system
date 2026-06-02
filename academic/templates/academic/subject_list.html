@@ -1,65 +1,62 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Subjects Directory{% endblock %}
+{% block title %}Subjects{% endblock %}
 
 {% block content %}
+
 <div class="dashboard-header">
-    <h1>Subjects</h1>
-    <p>A complete list of all registered subjects and their assigned teachers.</p>
+    <h1>📚 Subjects</h1>
+    <p>A complete list of all registered subjects</p>
 </div>
 
-<div class="data-table-container">
-    <div class="data-table-header">
-        <h2>Subject List</h2>
-        <a href="{% url 'add_subject' %}" class="add-btn">
-            <i class="fas fa-plus"></i> Add Subject
-        </a>
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-book"></i> All Subjects</h3>
+        {% if request.user.role == 'SUPER_ADMIN' %}
+        <a href="{% url 'add_subject' %}" class="btn-primary"><i class="fas fa-plus"></i> Add Subject</a>
+        {% endif %}
     </div>
-    
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table-modern">
             <thead>
                 <tr>
-                    <th>Subject</th>
+                    <th>Subject Name</th>
                     <th>Code</th>
+                    {% if request.user.role == 'ADMIN' or request.user.role == 'HEAD_TEACHER' %}
                     <th>Assigned Teacher</th>
-                    <th>Teacher Contact</th>
-                    <th>Actions</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
-                {% for subject in subjects %}
+                {% for item in subjects_with_teachers %}
                 <tr>
-                    <td>{{ subject.name }}</td>
-                    <td>{{ subject.code }}</td>
+                    <td><strong>{{ item.subject.name }}</strong></td>
+                    <td>{{ item.subject.code }}</td>
+                    {% if request.user.role == 'ADMIN' or request.user.role == 'HEAD_TEACHER' %}
                     <td>
-                        {% if subject.teacher %}
-                            {{ subject.teacher.get_full_name|default:subject.teacher.username }}
+                        {% if item.teacher_name != "Not Assigned" %}
+                            <span class="teacher-assigned">{{ item.teacher_name }}</span>
                         {% else %}
-                            <span class="text-warning">Not Assigned</span>
+                            <span class="teacher-unassigned">Not Assigned</span>
                         {% endif %}
                     </td>
-                    <td>
-                        {% if subject.teacher %}
-                            {{ subject.teacher.email }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                   
+                    {% endif %}
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="5" class="table-empty">
-                        <i class="fas fa-book-open"></i><br>
-                        No subjects found. 
-                        <a href="{% url 'add_subject' %}" style="color: var(--soft-green);">Add one now?</a>
-                    </td>
-                </tr>
+                <tr><td colspan="3" class="empty-state">No subjects found.{% if request.user.role == 'SUPER_ADMIN' %} <a href="{% url 'add_subject' %}">Add your first subject</a>{% endif %}</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+.teacher-assigned { background: #d1fae5; color: #059669; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+.teacher-unassigned { background: #fef3c7; color: #d97706; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+.data-table-modern { width: 100%; border-collapse: collapse; }
+.data-table-modern th { padding: 1rem; background: #f8fafc; font-size: 0.75rem; font-weight: 600; color: #64748b; text-align: left; }
+.data-table-modern td { padding: 0.8rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem; }
+</style>
+
 {% endblock %}

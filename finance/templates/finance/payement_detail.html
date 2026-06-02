@@ -1,210 +1,719 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Payment Details{% endblock %}
+{% block title %}Make Payment{% endblock %}
 
 {% block content %}
 
-<!-- Display messages -->
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
-            {{ message }}
-        </div>
-    {% endfor %}
-{% endif %}
+<div class="payment-wrapper">
+    <div class="payment-grid">
+        <!-- Left Column - Payment Card & Form -->
+        <div class="payment-left">
+            <!-- Payment Card -->
+            <div class="payment-card">
+                <div class="payment-card-header">
+                    <div class="payment-logo">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>EduNexus</span>
+                    </div>
+                    <div class="payment-chip">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                </div>
+                
+                <div class="payment-balance">
+                    <span class="balance-label">Pay to</span>
+                    <h2 class="balance-amount">{{ request.user.school.name|default:"EduNexus" }}</h2>
+                    <div class="payment-details">
+                        <p><i class="fas fa-building"></i> Paybill: <strong>123456</strong></p>
+                        <p><i class="fas fa-hashtag"></i> Account: Student Registration Number</p>
+                    </div>
+                </div>
+            </div>
 
-<div class="list-header">
-    <div class="list-title">
-        <h1>Payment Records</h1>
-        <p>View all student payment transactions.</p>
+            <!-- M-Pesa Payment Form -->
+            <div class="payment-form-container">
+                <div class="form-header">
+                    <h3><i class="fas fa-phone-alt"></i> M-Pesa Payment</h3>
+                    <p>Pay instantly from your phone - no bank needed</p>
+                </div>
+
+                <form method="POST" action="{% url 'mpesa_payment' %}" id="mpesaPaymentForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-user-graduate"></i> Student Registration Number</label>
+                        <input type="text" name="reg_number" placeholder="e.g., ADM-001" required autocomplete="off">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-phone-alt"></i> M-Pesa Phone Number</label>
+                            <input type="tel" name="phone_number" placeholder="0712345678" required>
+                            <small>You'll receive a prompt on this number</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-coins"></i> Amount (KES)</label>
+                            <input type="number" name="amount" placeholder="Enter amount" required step="1" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Payment Month</label>
+                        <select name="month" required>
+                            <option value="">Select Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="pay-btn">
+                        <i class="fas fa-arrow-right"></i> Pay with M-Pesa
+                    </button>
+                </form>
+
+                <!-- Manual Payment (Admin Only) -->
+                {% if request.user.role == 'ADMIN' or request.user.role == 'SUPER_ADMIN' %}
+                <div class="manual-payment-section">
+                    <div class="divider">
+                        <span>or</span>
+                    </div>
+                    <button class="manual-pay-btn" onclick="showManualPayment()">
+                        <i class="fas fa-money-bill-wave"></i> Record Manual Payment
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column - Recent Payments -->
+        <div class="payment-right">
+            <div class="recent-payments">
+                <div class="recent-header">
+                    <h4><i class="fas fa-history"></i> Recent Payments</h4>
+                    <a href="{% url 'payement_detail' %}" class="view-link">View All →</a>
+                </div>
+                <div class="transaction-list">
+                    {% for payment in payments|slice:":5" %}
+                    <div class="transaction-item">
+                        <div class="transaction-icon">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <div class="transaction-details">
+                            <h4>{{ payment.student.first_name }} {{ payment.student.last_name }}</h4>
+                            <p>{{ payment.reference }} • {{ payment.date_paid|date:"d M Y" }}</p>
+                        </div>
+                        <div class="transaction-amount {% if payment.reference|slice:':8' == 'PENDING_' %}pending{% else %}success{% endif %}">
+                            KES {{ payment.amount_paid|floatformat:0 }}
+                        </div>
+                        {% if payment.reference|slice:':8' != 'PENDING_' %}
+                        <a href="{% url 'download_payment_receipt' payment.id %}" class="receipt-btn" target="_blank">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="empty-transactions">
+                        <i class="fas fa-receipt"></i>
+                        <p>No payment records yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- ============================================ -->
-<!-- AUTOMATIC M-PESA SECTION (For Parents & Students) -->
-<!-- ============================================ -->
-<div class="payment-section">
-    <h3><i class="fas fa-mobile-alt"></i> Pay with M-Pesa (Automatic)</h3>
-    <p>Pay directly from your phone - M-Pesa will confirm your payment automatically.</p>
+<!-- Manual Payment Modal (Admin Only) -->
+<div id="manualPaymentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-money-bill-wave"></i> Record Manual Payment</h3>
+            <button class="modal-close" onclick="closeManualPayment()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" action="{% url 'process_payment' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Student Registration Number</label>
+                    <input type="text" name="reg_number" placeholder="e.g., ADM-001" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Amount (KES)</label>
+                        <input type="number" name="amount_paid" placeholder="Amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Reference Number</label>
+                        <input type="text" name="reference" placeholder="Receipt/Ref number" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Payment Month</label>
+                        <select name="month" required>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select name="method">
+                            <option value="Cash">Cash</option>
+                            <option value="M-Pesa">M-Pesa</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Record Payment</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Desktop: 2 columns */
+.payment-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .payment-grid {
+        grid-template-columns: 1fr 0.8fr;
+    }
+}
+
+/* Payment Card */
+.payment-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 28px;
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.payment-card::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    right: -20%;
+    width: 250px;
+    height: 250px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+
+.payment-card::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -10%;
+    width: 180px;
+    height: 180px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+}
+
+.payment-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.payment-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.payment-chip {
+    font-size: 1.5rem;
+    opacity: 0.7;
+}
+
+.payment-balance {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.balance-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.balance-amount {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.payment-details {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.payment-details i {
+    margin-right: 0.3rem;
+}
+
+/* Payment Form */
+.payment-form-container {
+    background: white;
+    border-radius: 24px;
+    padding: 1.8rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 1.8rem;
+}
+
+.form-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.form-header p {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 0.3rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-group label i {
+    width: 24px;
+    color: #2563eb;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.form-group small {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.4rem;
+    display: block;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Pay Button */
+.pay-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 40px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+}
+
+.pay-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+
+/* Manual Payment Section */
+.manual-payment-section {
+    margin-top: 1.8rem;
+}
+
+.divider {
+    text-align: center;
+    margin: 1rem 0;
+    position: relative;
+}
+
+.divider span {
+    background: white;
+    padding: 0 1rem;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e2e8f0;
+    z-index: 0;
+}
+
+.divider span {
+    position: relative;
+    z-index: 1;
+}
+
+.manual-pay-btn {
+    width: 100%;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #e2e8f0;
+    padding: 0.9rem;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.manual-pay-btn:hover {
+    background: #e2e8f0;
+}
+
+/* Recent Payments */
+.recent-payments {
+    background: white;
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    height: 100%;
+}
+
+.recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.recent-header h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.view-link {
+    font-size: 0.75rem;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.transaction-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem;
+    background: #f8fafc;
+    border-radius: 16px;
+    transition: all 0.2s;
+}
+
+.transaction-item:hover {
+    background: #f1f5f9;
+}
+
+.transaction-icon {
+    width: 44px;
+    height: 44px;
+    background: #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.transaction-details {
+    flex: 1;
+}
+
+.transaction-details h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.transaction-details p {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.transaction-amount {
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.transaction-amount.success {
+    color: #10b981;
+}
+
+.transaction-amount.pending {
+    color: #f59e0b;
+}
+
+.receipt-btn {
+    width: 32px;
+    height: 32px;
+    background: #e2e8f0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    text-decoration: none;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.receipt-btn:hover {
+    background: #2563eb;
+    color: white;
+}
+
+.empty-transactions {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.empty-transactions i {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+    opacity: 0.5;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 450px;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, #2563eb, #10b981);
+    color: white;
+    border: none;
+    padding: 0.9rem;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .payment-wrapper {
+        padding: 0.8rem;
+    }
     
-    <form method="POST" action="{% url 'mpesa_payment' %}" class="payment-form">
-        {% csrf_token %}
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>M-Pesa Phone Number <span class="required">*</span></label>
-                <input type="tel" name="phone_number" placeholder="e.g., 0712345678" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Amount (KES) <span class="required">*</span></label>
-                <input type="number" name="amount" placeholder="Amount" required step="1">
-            </div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Student Registration Number <span class="required">*</span></label>
-                <input type="text" name="reg_number" placeholder="e.g., ADM-001" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Payment Month <span class="required">*</span></label>
-                <select name="month" required>
-                    <option value="">-- Select Month --</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">
-                <i class="fas fa-credit-card"></i> Pay Now
-            </button>
-        </div>
-    </form>
-    <small class="text-muted">You will receive a prompt on your phone. Enter your PIN to complete payment.</small>
-</div>
+    .payment-card {
+        padding: 1.2rem;
+    }
+    
+    .balance-amount {
+        font-size: 1.3rem;
+    }
+    
+    .payment-details {
+        flex-direction: column;
+        gap: 0.3rem;
+        align-items: center;
+    }
+    
+    .payment-form-container {
+        padding: 1.2rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+    
+    .transaction-item {
+        flex-wrap: wrap;
+    }
+    
+    .transaction-amount {
+        flex: 1;
+        text-align: right;
+    }
+}
 
-<!-- ============================================ -->
-<!-- MANUAL PAYMENT SECTION (ADMIN ONLY) -->
-<!-- ============================================ -->
-{% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'ADMIN' %}
-<div class="payment-section">
-    <h3><i class="fas fa-receipt"></i> Manual Payment (Admin Only)</h3>
-    <p>Use this for Cash or Bank Transfer payments.</p>
+@media (max-width: 480px) {
+    .transaction-item {
+        flex-wrap: wrap;
+    }
+    
+    .transaction-details {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .receipt-btn {
+        margin-left: auto;
+    }
+}
+</style>
 
-    <form method="POST" action="{% url 'process_payment' %}" class="payment-form">
-        {% csrf_token %}
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Student Registration Number <span class="required">*</span></label>
-                <input type="text" name="reg_number" placeholder="e.g., ADM-001" required>
-            </div>
-            
-            <div class="form-group">
-                <label>M-Pesa Code / Reference <span class="required">*</span></label>
-                <input type="text" name="reference" placeholder="e.g., QWER12TY" required>
-            </div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Amount Paid (KES) <span class="required">*</span></label>
-                <input type="number" name="amount_paid" placeholder="e.g., 1000" required step="0.01">
-            </div>
-            
-            <div class="form-group">
-                <label>Payment Month <span class="required">*</span></label>
-                <select name="month" required>
-                    <option value="">-- Select Month --</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Payment Method</label>
-                <select name="method">
-                    <option value="M-Pesa">M-Pesa</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank Transfer</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Year</label>
-                <input type="number" name="year" value="2026" placeholder="2026">
-            </div>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">
-                <i class="fas fa-check-circle"></i> Confirm Payment
-            </button>
-        </div>
-    </form>
-</div>
-{% endif %}
+<script>
+function showManualPayment() {
+    document.getElementById('manualPaymentModal').style.display = 'flex';
+}
 
-<!-- Payment Records Table -->
-<div class="data-table-container">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Reg No</th>
-                    <th>Class</th>
-                    <th>Month</th>
-                    <th>Date Paid</th>
-                    <th>Reference</th>
-                    <th>Amount Paid</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for payment in payments %}
-                <tr>
-                    <td>{{ payment.student.first_name }} {{ payment.student.last_name }}</td>
-                    <td>{{ payment.student.registration_number }}</td>
-                    <td>{{ payment.student.current_class|default:"-" }}</td>
-                    <td>
-                        {% if payment.month == 1 %}January
-                        {% elif payment.month == 2 %}February
-                        {% elif payment.month == 3 %}March
-                        {% elif payment.month == 4 %}April
-                        {% elif payment.month == 5 %}May
-                        {% elif payment.month == 6 %}June
-                        {% elif payment.month == 7 %}July
-                        {% elif payment.month == 8 %}August
-                        {% elif payment.month == 9 %}September
-                        {% elif payment.month == 10 %}October
-                        {% elif payment.month == 11 %}November
-                        {% elif payment.month == 12 %}December
-                        {% else %}{{ payment.month }}
-                        {% endif %} {{ payment.year }}
-                    </td>
-                    <td>{{ payment.date_paid|date:"d M Y" }}</td>
-                    <td>{{ payment.reference }}</td>
-                    <td>KES {{ payment.amount_paid|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="empty-state">
-                        <i class="fas fa-credit-card"></i>
-                        <p>No payment records found.</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+function closeManualPayment() {
+    document.getElementById('manualPaymentModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('manualPaymentModal');
+    if (event.target === modal) {
+        closeManualPayment();
+    }
+}
+</script>
 
 {% endblock %}

@@ -1,47 +1,68 @@
 {% load static %}
+{% load pwa %} 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>EduNexus | {% block title %}Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="manifest" href="{% static 'manifest.json' %}?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400..700;1,400..700&family=Tangerine:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petit+Formal+Script&family=Quintessential&family=Tangerine&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Petit+Formal+Script&family=Quintessential&family=Tangerine&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Subscription block for non-admin users -->
+    {% if request.user.is_authenticated and request.user.school and request.user.role != 'SUPER_ADMIN' and request.user.role != 'ADMIN' %}
+        {% with sub=request.user.school.subscription %}
+            {% if not sub.can_access_system %}
+                <div class="user-subscription-block">
+                    <div class="user-subscription-modal">
+                        <div class="modal-icon"><i class="fas fa-school"></i></div>
+                        <h3 class="modal-title">School Access Suspended</h3>
+                        <p class="modal-message">Your school's subscription has expired. Please contact your school administrator to restore access.</p>
+                        <button class="modal-button" onclick="window.location.reload()">Try Again</button>
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% endif %}
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <!-- Top Navigation -->
     <nav class="top-nav">
         <div class="nav-left">
-            <div class="hamburger" id="hamburger">☰</div>
-            <div class="logo">EduNexus</div>
+            <div class="logo-small">
+                {% if request.user.role == 'SUPER_ADMIN' %}
+                    EduNexus
+                {% elif request.user.school %}
+                    {{ request.user.school.name }}
+                {% else %}
+                    EduNexus
+                {% endif %}
+            </div>
         </div>
-        
-        <div class="search-bar">
-            <span>🔎</span>
-            <input type="text" id="globalSearch" placeholder="Search students, teachers...">
-        </div>
-
         <div class="nav-right">
             <div class="notification-badge" id="notificationBell">
-                <span>🔔</span>
+                <i class="fas fa-bell"></i>
                 <span class="badge-count" id="unreadBadge">0</span>
             </div>
-            <div>
-                <div class="user-info" id="userInfoBtn">
-                    <div class="avatar-circle">
-                        {{ request.user.first_name|first|default:request.user.username|first|upper }}
-                    </div>
-                    <div>
-                        <div class="user-name">{{ request.user.first_name|default:request.user.username }}</div>
-                        <div class="user-role">{{ request.user.get_role_display }}</div>
-                    </div>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="dropdown-menu" id="userDropdown">
-                    <a href="{% url 'change_password' %}"><i class="fas fa-key"></i> Change Password</a>
-                    <a href="{% url 'logout' %}" onclick="return confirmLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <div class="profile-icon" id="profileIconBtn">
+                <div class="avatar-circle">
+                    {{ request.user.first_name|first|default:request.user.username|first|upper }}
                 </div>
             </div>
         </div>
@@ -49,208 +70,394 @@
 
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-        <ul>
-            {% if request.user.role != 'STUDENT' and request.user.role != 'PARENT' %}
+        <div class="sidebar-header">
+            <div class="logo">
+                {% if request.user.role == 'SUPER_ADMIN' %}
+                    EduNexus
+                {% elif request.user.school %}
+                    {{ request.user.school.name }}
+                {% else %}
+                    EduNexus
+                {% endif %}
+            </div>
+            <button class="sidebar-close" id="sidebarClose">&times;</button>
+        </div>
+        <div class="sidebar-user-card">
+            <div class="user-card-avatar">
+                {{ request.user.first_name|first|default:request.user.username|first|upper }}
+            </div>
+            <div class="user-card-info">
+                <div class="user-card-name">{{ request.user.first_name|default:request.user.username }} {{ request.user.last_name }}</div>
+                <div class="user-card-role">{{ request.user.get_role_display }}</div>
+                <div class="user-card-email">{{ request.user.email|default:"No email" }}</div>
+            </div>
+            <a href="{% url 'edit_profile' %}" class="user-card-link">
+                <i class="fas fa-user-edit"></i> Edit Profile
+            </a>
+            <a href="{% url 'logout' %}" class="user-card-link logout-link" onclick="return confirm('Logout?')">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+        
+        <ul class="sidebar-menu">
             <li class="menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" data-url="{% url 'dashboard' %}">
-                <span class="menu-text">🏠 Home</span>
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
             </li>
-            {% endif %}
-
-           {% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'ADMIN' %}
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">👤 Admin</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                <li data-url="{% url 'user_list' %}">User Management</li>
-                <li data-url="{% url 'register_page' %}">➕ Register User</li>
-            </ul>
-            {% endif %}
-
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">👩‍🎓 Students</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                {% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'ADMIN' %}
-                    <li data-url="{% url 'student_list' %}">All Students</li>
-                    <li data-url="{% url 'attendance_report' %}">Attendance</li>
-                {% elif request.user.role == 'TEACHER' %}
-                    <li data-url="{% url 'student_list' %}">My Students</li>
-                    <li data-url="{% url 'attendance_report' %}">Mark Attendance</li>
-                {% elif request.user.role == 'PARENT' %}
-                    <li data-url="{% url 'student_list' %}">My Children</li>
-                {% elif request.user.role == 'STUDENT' %}
-                    <li data-url="{% url 'student_list' %}">My Profile</li>
-                {% endif %}
-            </ul>
-            {% if request.user.role != 'PARENT' and request.user.role != 'STUDENT' %}
-            
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">👨‍🏫 Teachers</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                <li data-url="{% url 'teacher_list' %}">All Teachers</li>
-
-            </ul>
-            {% endif %}
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">📚 Academic</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                {% if request.user.role != 'STUDENT' and request.user.role != 'PARENT' %}
-                <li data-url="{% url 'classroom_list' %}">Classes</li>
-                {% endif %}
-                <li data-url="{% url 'subject_list' %}">Subjects</li>
-                <li data-url="{% url 'exam_list' %}">Exams</li>
-                <li data-url="{% url 'results' %}">Results</li>
-            </ul>
-
-            {% if request.user.role != 'TEACHER' %}
-            
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">💰 Finance</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                <li data-url="{% url 'payement_detail' %}">Payments</li>
-            </ul>
-            {% endif %}
-
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">📝 Exams</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                <li data-url="{% url 'exam_list' %}">Schedule</li>
-                <li data-url="{% url 'results' %}">Results</li>
-                {% if request.user.role != 'STUDENT' and request.user.role != 'PARENT' %}
-                <li data-url="{% url 'add_results' %}">Enter Results</li>
-                {% endif %}
-            </ul>
-
-            {% if request.user.role == 'TEACHER' %}
-            <li class="menu-item" data-url="{% url 'add_results' %}">
-                <span class="menu-text">📝 Add Results</span>
-            </li>
-            {% endif %}
 
             {% if request.user.role == 'SUPER_ADMIN' %}
-            <li class="menu-item has-dropdown">
-                <span class="menu-text">➕ Add New</span>
-                <span class="arrow">›</span>
-            </li>
-            <ul class="dropdown">
-                <li data-url="{% url 'add_classroom' %}">Add Classroom</li>
-                <li data-url="{% url 'add_subject' %}">Add Subject</li>
-                <li data-url="{% url 'add_exam' %}">Add Exam</li>
-            </ul>
+                <li class="menu-item" data-url="{% url 'user_list' %}">
+                    <i class="fas fa-users"></i><span>All Users</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'register_page' %}">
+                    <i class="fas fa-user-plus"></i><span>Register User</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'super_admin_schools' %}">
+                    <i class="fas fa-school"></i><span>Manage Schools</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subject_list' %}">
+                    <i class="fas fa-book"></i><span>Subjects</span>
+                </li>
+            {% endif %}
+
+            {% if request.user.role == 'ADMIN' %}
+                <li class="menu-item" data-url="{% url 'register_page' %}">
+                    <i class="fas fa-user-plus"></i><span>Register User</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'user_list' %}">
+                    <i class="fas fa-users"></i><span>User List</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'payement_detail' %}">
+                    <i class="fas fa-money-bill-wave"></i><span>Finance</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subscription_dashboard' %}">
+                    <i class="fas fa-credit-card"></i><span>Subscription</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'school_payment_settings' %}">
+                    <i class="fas fa-cogs"></i><span>Payment Settings</span>
+                </li>
+            {% endif %}
+
+            {% if request.user.role == 'HEAD_TEACHER' %}
+                <li class="menu-item" data-url="{% url 'user_list' %}">
+                    <i class="fas fa-users"></i><span>User List</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'register_page' %}">
+                    <i class="fas fa-user-plus"></i><span>Register User</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'student_list' %}">
+                    <i class="fas fa-user-graduate"></i><span>Students</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'teacher_list' %}">
+                    <i class="fas fa-chalkboard-user"></i><span>Teachers</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'classroom_list' %}">
+                    <i class="fas fa-building"></i><span>Classes</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subject_allocations' %}">
+                    <i class="fas fa-book"></i><span>Subject Allocation</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'exam_list' %}">
+                    <i class="fas fa-calendar-alt"></i><span>Exams</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'promote_students' %}">
+                    <i class="fas fa-arrow-up"></i><span>Promote Students</span>
+                </li>
+            {% endif %}
+
+            {% if request.user.role == 'TEACHER' %}
+                <li class="menu-item" data-url="{% url 'student_list' %}">
+                    <i class="fas fa-user-graduate"></i><span>My Students</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'attendance_report' %}">
+                    <i class="fas fa-calendar-check"></i><span>Attendance</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'classroom_list' %}">
+                    <i class="fas fa-building"></i><span>My Classes</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subject_list' %}">
+                    <i class="fas fa-book"></i><span>My Subjects</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'add_results' %}">
+                    <i class="fas fa-edit"></i><span>Add Results</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'class_results' %}">
+                    <i class="fas fa-chart-line"></i><span>Results</span>
+                </li>
+            {% endif %}
+
+            {% if request.user.role == 'STUDENT' %}
+                <li class="menu-item" data-url="{% url 'student_list' %}">
+                    <i class="fas fa-user"></i><span>My Profile</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subject_list' %}">
+                    <i class="fas fa-book"></i><span>My Subjects</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'report_card' %}">
+                    <i class="fas fa-file-alt"></i><span>My Results</span>
+                </li>
+            {% endif %}
+
+            {% if request.user.role == 'PARENT' %}
+                <li class="menu-item" data-url="{% url 'student_list' %}">
+                    <i class="fas fa-child"></i><span>My Children</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'subject_list' %}">
+                    <i class="fas fa-book"></i><span>Subjects</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'report_card' %}">
+                    <i class="fas fa-file-alt"></i><span>Results</span>
+                </li>
+                <li class="menu-item" data-url="{% url 'payement_detail' %}">
+                    <i class="fas fa-money-bill-wave"></i><span>Payments</span>
+                </li>
             {% endif %}
         </ul>
     </aside>
 
+    <!-- Main Content -->
     <main class="main-content">
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
+            <div class="messages" style="display: none;">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
         {% endif %}
         
         {% block content %}
         {% endblock %}
     </main>
 
-    <script>
-        document.querySelectorAll('.has-dropdown').forEach(menu => {
-            menu.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const dropdown = this.nextElementSibling;
-                const arrow = this.querySelector('.arrow');
-                
-                document.querySelectorAll('.dropdown').forEach(dd => {
-                    if (dd !== dropdown) dd.classList.remove('show');
-                });
-                document.querySelectorAll('.arrow').forEach(ar => {
-                    if (ar !== arrow) ar.style.transform = 'rotate(0deg)';
-                });
-                
-                dropdown.classList.toggle('show');
-                if (arrow) {
-                    arrow.style.transform = dropdown.classList.contains('show') ? 'rotate(90deg)' : 'rotate(0deg)';
+    <!-- Bottom Navigation (Mobile Only) -->
+    <div class="bottom-nav" id="bottomNav">
+        <div class="nav-items">
+            <div class="nav-item" data-url="{% url 'dashboard' %}">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </div>
+            <div class="fab-container" id="fabButton">
+                <div class="fab-main"><i class="fas fa-plus"></i></div>
+                <div class="fab-options">
+                    {% if request.user.role == 'SUPER_ADMIN' %}
+                        <div class="fab-option" data-url="{% url 'super_admin_schools' %}"><i class="fas fa-school"></i><span>Add School</span></div>
+                        <div class="fab-option" data-url="{% url 'register_page' %}"><i class="fas fa-user-plus"></i><span>Add User</span></div>
+                    {% elif request.user.role == 'ADMIN' %}
+                        <div class="fab-option" data-url="{% url 'register_page' %}"><i class="fas fa-user-plus"></i><span>Register</span></div>
+                        <div class="fab-option" data-url="{% url 'subscription_dashboard' %}"><i class="fas fa-credit-card"></i><span>Pay Subscription</span></div>
+                        <div class="fab-option" data-url="{% url 'add_classroom' %}"><i class="fas fa-credit-card"></i><span>classroom</span></div>
+                    {% elif request.user.role == 'HEAD_TEACHER' %}
+                        <div class="fab-option" data-url="{% url 'register_page' %}"><i class="fas fa-user-plus"></i><span>Register</span></div>
+                        <div class="fab-option" data-url="{% url 'add_results' %}"><i class="fas fa-edit"></i><span>Add Results</span></div>
+                    {% elif request.user.role == 'TEACHER' %}
+                        <div class="fab-option" data-url="{% url 'add_results' %}"><i class="fas fa-edit"></i><span>Enter Marks</span></div>
+                        <div class="fab-option" data-url="{% url 'attendance_report' %}"><i class="fas fa-calendar-check"></i><span>Attendance</span></div>
+                    {% elif request.user.role == 'STUDENT' %}
+                        <div class="fab-option" data-url="{% url 'report_card' %}"><i class="fas fa-file-alt"></i><span>Report Card</span></div>
+                    {% elif request.user.role == 'PARENT' %}
+                        <div class="fab-option" data-url="{% url 'payement_detail' %}"><i class="fas fa-money-bill-wave"></i><span>Pay Fees</span></div>
+                    {% endif %}
+                    <div class="fab-option" data-url="{% url 'user_notifications' %}"><i class="fas fa-bell"></i><span>Notifications</span></div>
+                </div>
+            </div>
+            <div class="nav-item" data-url="{% url 'user_notifications' %}">
+                <i class="fas fa-bell"></i>
+                <span>Alerts</span>
+                <span class="mobile-badge" id="mobileBadgeCount">0</span>
+            </div>
+            <div class="nav-item" id="menuBtn">
+                <i class="fas fa-bars"></i>
+                <span>Menu</span>
+            </div>
+        </div>
+        <!-- School Name on Mobile Bottom Nav -->
+        <div class="bottom-nav-school" style="text-align: center; font-size: 10px; padding: 8px 0 12px 0; color: #9ca3af; border-top: 1px solid #e5e7eb; margin-top: 5px;">
+            {% if request.user.role == 'SUPER_ADMIN' %}
+                EduNexus
+            {% elif request.user.school %}
+                {{ request.user.school.name }}
+            {% else %}
+                EduNexus
+            {% endif %}
+        </div>
+    </div>
+
+<script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/serviceworker.js', { scope: '/' })
+            .then(reg => console.log('✅ Service Worker Registered!'))
+            .catch(err => console.log('❌ Service Worker Error:', err));
+    }
+
+    // ========== SIDEBAR TOGGLE ==========
+    const profileIconBtn = document.getElementById('profileIconBtn');
+    const menuBtn = document.getElementById('menuBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.getElementById('sidebarClose');
+
+    function toggleSidebar() { sidebar.classList.toggle('open'); }
+    function closeSidebar() { sidebar.classList.remove('open'); }
+
+    if (profileIconBtn) profileIconBtn.addEventListener('click', toggleSidebar);
+    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if (sidebarClose) sidebarClose.addEventListener('click', closeSidebar);
+
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 768 && sidebar && !sidebar.contains(e.target) && !profileIconBtn?.contains(e.target) && !menuBtn?.contains(e.target)) {
+            closeSidebar();
+        }
+    });
+
+    // ========== NOTIFICATION BELL CLICK HANDLER ==========
+    const notificationBell = document.getElementById('notificationBell');
+    if (notificationBell) {
+        notificationBell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.location.href = "{% url 'user_notifications' %}";
+        });
+    }
+
+    // Bottom navigation items already have data-url handlers
+    // Dropdown Menus (if any)
+    document.querySelectorAll('.has-dropdown').forEach(menu => {
+        menu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = this.nextElementSibling;
+            const arrow = this.querySelector('.arrow');
+            if (dropdown) dropdown.classList.toggle('show');
+            if (arrow) arrow.style.transform = dropdown?.classList.contains('show') ? 'rotate(90deg)' : 'rotate(0deg)';
+        });
+    });
+
+    // Menu Item Clicks
+    document.querySelectorAll('.menu-item[data-url]').forEach(item => {
+        item.addEventListener('click', () => window.location.href = item.getAttribute('data-url'));
+    });
+
+    // FAB Button
+    const fabButton = document.getElementById('fabButton');
+    if (fabButton) {
+        fabButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            this.classList.toggle('active');
+        });
+    }
+    document.addEventListener('click', () => fabButton?.classList.remove('active'));
+
+    // Bottom Navigation Items
+    document.querySelectorAll('.nav-item[data-url]').forEach(item => {
+        item.addEventListener('click', function() {
+            window.location.href = this.getAttribute('data-url');
+        });
+    });
+
+    document.querySelectorAll('.fab-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.location.href = this.getAttribute('data-url');
+        });
+    });
+
+    // ========== TOAST FUNCTION ==========
+    let lastToastMessage = '', lastToastTime = 0;
+    function showToast(message, type = 'success', title = '') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const now = Date.now();
+        if (lastToastMessage === message && (now - lastToastTime) < 2000) return;
+        lastToastMessage = message;
+        lastToastTime = now;
+        
+        const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notification' };
+        const finalTitle = title || titles[type] || 'Notification';
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let iconClass = 'fa-check-circle', progressColor = '#10b981';
+        if (type === 'success') { iconClass = 'fa-check-circle'; progressColor = '#10b981'; }
+        else if (type === 'error') { iconClass = 'fa-times-circle'; progressColor = '#ef4444'; }
+        else if (type === 'warning') { iconClass = 'fa-exclamation-triangle'; progressColor = '#f59e0b'; }
+        else if (type === 'info') { iconClass = 'fa-info-circle'; progressColor = '#3b82f6'; }
+        
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fas ${iconClass}"></i></div>
+            <div class="toast-content">
+                <div class="toast-title">${finalTitle}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" onclick="this.closest('.toast').remove()"><i class="fas fa-times"></i></button>
+            <div class="toast-progress"><div class="toast-progress-bar" style="background: ${progressColor}"></div></div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            document.querySelectorAll('.alert, .alert-success, .alert-error, .alert-warning, .alert-info').forEach(msg => {
+                let type = 'info', message = msg.innerText;
+                if (msg.classList.contains('alert-success')) type = 'success';
+                else if (msg.classList.contains('alert-error')) type = 'error';
+                else if (msg.classList.contains('alert-warning')) type = 'warning';
+                showToast(message, type);
+                msg.remove();
+            });
+        }, 100);
+    });
+
+    // ========== NOTIFICATION SYSTEM ==========
+    let lastUnreadCount = 0, initialCheckDone = false;
+    
+    function playNotificationSound() {
+        try { new Audio("{% static 'sounds/ding.mp3' %}").play().catch(e => console.log('Sound error:', e)); } catch(e) {}
+    }
+    
+    function showInAppNotification(title, message, notificationId) {
+        const shownKey = `notif_${notificationId}`;
+        if (sessionStorage.getItem(shownKey)) return;
+        sessionStorage.setItem(shownKey, 'shown');
+        if (typeof showToast === 'function') showToast(message, 'info', title);
+        playNotificationSound();
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const browserNotif = new Notification(title, { body: message, tag: 'edunexus' });
+            browserNotif.onclick = () => { window.focus(); window.location.href = '/notifications/'; };
+            setTimeout(() => browserNotif.close(), 5000);
+        }
+    }
+    
+    function checkNewNotifications() {
+        fetch('/notifications/unread-count/')
+            .then(res => res.json())
+            .then(data => {
+                const badge = document.getElementById('unreadBadge');
+                const mobileBadge = document.getElementById('mobileBadgeCount');
+                const newCount = data.unread_count;
+                if (badge && newCount > 0) { badge.style.display = 'inline-block'; badge.textContent = newCount > 9 ? '9+' : newCount; }
+                else if (badge) badge.style.display = 'none';
+                if (mobileBadge && newCount > 0) { mobileBadge.style.display = 'inline-block'; mobileBadge.textContent = newCount > 9 ? '9+' : newCount; }
+                else if (mobileBadge) mobileBadge.style.display = 'none';
+                if (!initialCheckDone && newCount > 0) {
+                    initialCheckDone = true;
+                    fetch('/notifications/latest/').then(res => res.json()).then(notifData => notifData.forEach(notif => showInAppNotification(notif.title, notif.message, notif.id))).catch(err => console.log(err));
                 }
-            });
-        });
-        
-        document.querySelectorAll('.menu-item[data-url]').forEach(item => {
-            item.addEventListener('click', () => window.location.href = item.getAttribute('data-url'));
-        });
-        document.querySelectorAll('.dropdown li[data-url]').forEach(item => {
-            item.addEventListener('click', () => window.location.href = item.getAttribute('data-url'));
-        });
-        
-        const userInfoBtn = document.getElementById('userInfoBtn');
-        const userDropdown = document.getElementById('userDropdown');
-        if (userInfoBtn) {
-            userInfoBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userDropdown.classList.toggle('show');
-            });
-        }
-        document.addEventListener('click', () => userDropdown?.classList.remove('show'));
-        
-        const hamburger = document.getElementById('hamburger');
-        const sidebar = document.getElementById('sidebar');
-        if (hamburger) {
-            hamburger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                sidebar.classList.toggle('open');
-            });
-        }
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && sidebar && hamburger) {
-                if (!sidebar.contains(e.target) && !hamburger.contains(e.target)) {
-                    sidebar.classList.remove('open');
+                if (initialCheckDone && newCount > lastUnreadCount && lastUnreadCount !== 0) {
+                    fetch('/notifications/latest/').then(res => res.json()).then(notifData => notifData.forEach(notif => showInAppNotification(notif.title, notif.message, notif.id))).catch(err => console.log(err));
                 }
-            }
-        });
-        
-        const globalSearch = document.getElementById('globalSearch');
-        if (globalSearch) {
-            globalSearch.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    window.location.href = '/students/all/?search=' + encodeURIComponent(e.target.value);
-                }
-            });
-        }
-        
-        const notificationBell = document.getElementById('notificationBell');
-        if (notificationBell) {
-            notificationBell.addEventListener('click', () => window.location.href = "{% url 'user_notifications' %}");
-        }
-        
-        function updateUnreadCount() {
-            fetch('/notifications/unread-count/')
-                .then(res => res.json())
-                .then(data => {
-                    const badge = document.getElementById('unreadBadge');
-                    if (badge && data.unread_count > 0) {
-                        badge.style.display = 'inline-block';
-                        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-                    } else if (badge) {
-                        badge.style.display = 'none';
-                    }
-                });
-        }
-        setInterval(updateUnreadCount, 30000);
-        updateUnreadCount();
-        
-        function confirmLogout() {
-            return confirm("Are you sure you want to logout?");
-        }
-    </script>
+                lastUnreadCount = newCount;
+            }).catch(err => console.log('Notification fetch error:', err));
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+        setTimeout(() => checkNewNotifications(), 500);
+        setInterval(checkNewNotifications, 10000);
+    });
+    
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewNotifications(); });
+</script>
 </body>
 </html>

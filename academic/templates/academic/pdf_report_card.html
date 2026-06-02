@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Report Card - {{ student.first_name }} {{ student.last_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'DejaVu Sans', 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #2563eb;
+        }
+        .school-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+        .document-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #10b981;
+        }
+        .student-info {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .info-item {
+            font-size: 11px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #64748b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th {
+            background: #2563eb;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+        }
+        td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: center;
+            font-size: 10px;
+        }
+        .subject-cell {
+            text-align: left;
+            font-weight: bold;
+        }
+        .summary {
+            background: #d1fae5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            text-align: center;
+        }
+        .footer {
+            text-align: center;
+            font-size: 9px;
+            color: #94a3b8;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .grade-E { color: #059669; font-weight: bold; }
+        .grade-D { color: #2563eb; font-weight: bold; }
+        .grade-C { color: #d97706; font-weight: bold; }
+        .grade-B { color: #dc2626; font-weight: bold; }
+        .grade-A { color: #9333ea; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="school-name">{{ student.school.name|default:"EDUNEXUS SCHOOL" }}</div>
+        <div class="document-title">OFFICIAL REPORT CARD</div>
+        <div>Generated: {{ generated_at|date:"d F Y H:i" }}</div>
+    </div>
+
+    <div class="student-info">
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Student Name:</span> {{ student.first_name }} {{ student.last_name }}</div>
+            <div class="info-item"><span class="info-label">Admission No:</span> {{ student.registration_number }}</div>
+            <div class="info-item"><span class="info-label">Class:</span> {{ student.current_class.name|default:"Not Assigned" }}</div>
+            <div class="info-item"><span class="info-label">Exam:</span> {{ exam.name }}</div>
+            <div class="info-item"><span class="info-label">Exam Type:</span> {{ exam.get_exam_type_display }}</div>
+            <div class="info-item"><span class="info-label">Exam Date:</span> {{ exam.date_started|date:"d M Y" }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Marks</th>
+                <th>Out Of</th>
+                <th>Grade</th>
+                <th>Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+            <tr>
+                <td class="subject-cell">{{ result.subject.name }}</td>
+                <td>{{ result.marks_obtained }}</td>
+                <td>{{ result.out_of }}</td>
+                <td class="grade-{{ result.grades|first|upper }}">{{ result.grades }}</td>
+                <td>{{ result.teacher_remark|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <div class="summary-grid">
+            <div><strong>Total Marks:</strong><br>{{ total_marks }}/{{ max_marks }}</div>
+            <div><strong>Percentage:</strong><br>{{ percentage }}%</div>
+            <div><strong>Overall Grade:</strong><br>{{ overall_grade }}</div>
+            <div><strong>Class Rank:</strong><br>{{ class_rank }}</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        This is an official document generated by EduNexus School Management System.<br>
+        For verification, please contact the school administration.
+    </div>
+</body>
+</html>

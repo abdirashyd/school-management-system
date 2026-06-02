@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Receipt - {{ receipt_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'DejaVu Sans', 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .receipt-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #10b981;
+        }
+        .school-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        .receipt-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #10b981;
+            margin-top: 5px;
+        }
+        .receipt-number {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        .info-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #64748b;
+        }
+        .payment-details {
+            margin-bottom: 20px;
+        }
+        .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .payment-table th {
+            background: #2563eb;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+        .payment-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .total-row {
+            font-weight: bold;
+            background: #d1fae5;
+        }
+        .footer {
+            text-align: center;
+            font-size: 9px;
+            color: #94a3b8;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .status-paid {
+            color: #10b981;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="header">
+            <div class="school-name">{{ payment.school.name|default:"EDUNEXUS SCHOOL" }}</div>
+            <div class="receipt-title">OFFICIAL PAYMENT RECEIPT</div>
+            <div class="receipt-number">Receipt No: {{ receipt_number }}</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-row">
+                <span class="info-label">Date:</span>
+                <span>{{ payment.date_paid|date:"d F Y H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="status-paid">✓ PAID</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Transaction Reference:</span>
+                <span>{{ payment.reference }}</span>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-row">
+                <span class="info-label">Student Name:</span>
+                <span>{{ payment.student.first_name }} {{ payment.student.last_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Admission Number:</span>
+                <span>{{ payment.student.registration_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Class:</span>
+                <span>{{ payment.student.current_class|default:"Not Assigned" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Parent:</span>
+                <span>{{ payment.student.parents.get_full_name|default:"Not assigned" }}</span>
+            </div>
+        </div>
+
+        <div class="payment-details">
+            <table class="payment-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount (KES)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>School Fees - {{ payment.get_month_display }} {{ payment.year }}</td>
+                        <td>{{ payment.amount_paid|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Total Paid</strong></td>
+                        <td><strong>{{ payment.amount_paid|floatformat:2 }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-card">
+            <div class="info-row">
+                <span class="info-label">Payment Method:</span>
+                <span>{{ payment.get_method_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Recorded By:</span>
+                <span>{{ payment.recorded_by.get_full_name|default:"System" }}</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            This is a computer-generated receipt. No signature required.<br>
+            For inquiries, contact finance@edunexus.com
+        </div>
+    </div>
+</body>
+</html>

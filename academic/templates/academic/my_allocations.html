@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Assignments{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>📚 My Teaching Assignments</h1>
+    <p>Subjects and classes assigned to you</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Your Classes & Subjects</h3>
+    </div>
+    
+    {% if classes_dict %}
+        <div class="classes-list">
+            {% for class_name, subjects in classes_dict.items %}
+            <div class="class-card">
+                <div class="class-header">
+                    <i class="fas fa-building"></i>
+                    <strong>{{ class_name }}</strong>
+                </div>
+                <div class="subjects-list">
+                    {% for subject in subjects %}
+                    <span class="subject-badge">{{ subject }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-chalkboard-user"></i>
+            <p>No subjects or classes assigned to you yet.</p>
+            <p>Please contact your school administrator.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.classes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.class-card {
+    background: #faf5ff;
+    border-radius: 12px;
+    padding: 15px;
+    border-left: 4px solid #6b21a8;
+}
+
+.class-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.subjects-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.subject-badge {
+    background: white;
+    color: #6b21a8;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 1px solid #c084fc;
+}
+</style>
+
+{% endblock %}

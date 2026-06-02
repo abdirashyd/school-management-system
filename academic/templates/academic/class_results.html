@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Class Results{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>📊 Class Results</h1>
+    <p>View and download results for your classes</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filter Section -->
+<div class="card">
+    <div class="card-header">
+        <h3>Filter Results</h3>
+    </div>
+    <form method="GET" action="{% url 'class_results' %}">
+        <div class="form-row" style="padding: 15px; display: flex; gap: 15px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1;">
+                <label>Select Class *</label>
+                <select name="class" class="form-control" required>
+                    <option value="">-- Select Class --</option>
+                    {% for class in classes %}
+                        <option value="{{ class.id }}" {% if selected_class_id == class.id|stringformat:"s" %}selected{% endif %}>
+                            {{ class.name }} {% if class.stream %}({{ class.stream }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+                <label>Select Exam *</label>
+                <select name="exam" class="form-control" required>
+                    <option value="">-- Select Exam --</option>
+                    {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam_id == exam.id|stringformat:"s" %}selected{% endif %}>
+                            {{ exam.name }} ({{ exam.get_exam_type_display }}) - {{ exam.date_started|date:"M Y" }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn-primary">View Results</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results Table -->
+{% if class_data and students_data %}
+<div class="card">
+    <div class="card-header">
+        <h3>{{ class_data.classroom.name }} {% if class_data.classroom.stream %}({{ class_data.classroom.stream }}){% endif %} - {{ class_data.exam.name }}</h3>
+        <div class="download-buttons">
+           <a href="{% url 'download_results_pdf' class_data.classroom.id class_data.exam.id %}" class="btn-success">
+    📥 Download PDF
+</a>
+        </div>
+    </div>
+    
+    <!-- Class Summary -->
+    <div style="background: #f3e8ff; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <div><strong>Total Students:</strong> {{ students_data|length }}</div>
+            <div><strong>Class Average:</strong> {{ class_average }}%</div>
+            {% if highest_score %}
+            <div><strong>Highest Score:</strong> {{ highest_score.student.first_name }} {{ highest_score.student.last_name }} ({{ highest_score.percentage }}%)</div>
+            {% endif %}
+            {% if lowest_score %}
+            <div><strong>Lowest Score:</strong> {{ lowest_score.student.first_name }} {{ lowest_score.student.last_name }} ({{ lowest_score.percentage }}%)</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr style="background: #f3e8ff;">
+                    <th style="padding: 12px;">Student Name</th>
+                    <th style="padding: 12px;">Admission No</th>
+                    {% for subject in subjects %}
+                        <th style="padding: 12px; text-align: center;">{{ subject.name }}</th>
+                    {% endfor %}
+                    <th style="padding: 12px; text-align: center;">Total</th>
+                    <th style="padding: 12px; text-align: center;">%</th>
+                    <th style="padding: 12px; text-align: center;">Rank</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student_data in students_data %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 10px;">{{ student_data.student.first_name }} {{ student_data.student.last_name }}</td>
+                    <td style="padding: 10px;">{{ student_data.student.registration_number }}</td>
+                    {% for result in student_data.subject_results %}
+                        <td style="padding: 10px; text-align: center;">
+                            {% if result.marks != '-' %}
+                                {{ result.marks }}<br>
+                                <small class="grade-{{ result.grade|first|lower }}">{{ result.grade }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td style="padding: 10px; text-align: center;">{{ student_data.total }}/{{ student_data.max }}</td>
+                    <td style="padding: 10px; text-align: center; font-weight: bold;">{{ student_data.percentage }}%</td>
+                    <td style="padding: 10px; text-align: center;">{{ forloop.counter }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% elif selected_class_id and selected_exam_id %}
+<div class="card">
+    <div class="empty-state">
+        <i class="fas fa-chart-line"></i>
+        <p>No results found for the selected class and exam.</p>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.grade-a { color: #10b981; }
+.grade-b { color: #3b82f6; }
+.grade-c { color: #f59e0b; }
+.grade-d { color: #f97316; }
+.grade-e { color: #ef4444; }
+.grade-f { color: #dc2626; }
+</style>
+
+{% endblock %}

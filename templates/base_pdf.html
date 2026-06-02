@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}EduNexus Report{% endblock %}</title>
+    <style>
+        /* PDF-specific styles - these will be applied when generating PDF */
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', 'Arial', 'Helvetica', sans-serif;
+            background: white;
+            color: #1e293b;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Basic reset for PDF */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Container */
+        .report-card-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        /* Headers */
+        .report-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #2563eb;
+        }
+        
+        .school-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2563eb;
+            margin-bottom: 5px;
+        }
+        
+        .school-motto {
+            font-size: 11px;
+            color: #64748b;
+        }
+        
+        .report-title h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #10b981;
+            margin: 5px 0;
+        }
+        
+        /* Student Details Card */
+        .student-details-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2563eb;
+        }
+        
+        .details-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        
+        .detail-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+        }
+        
+        .detail-value {
+            font-size: 11px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        
+        /* Marks Card */
+        .marks-card {
+            margin-bottom: 20px;
+        }
+        
+        .card-header-modern {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .card-header-modern h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        .data-table-modern {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table-modern th {
+            background: #f8fafc;
+            padding: 10px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748b;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .data-table-modern td {
+            padding: 8px;
+            font-size: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        /* Grade Badges */
+        .grade-badge {
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .grade-e { background: #d1fae5; color: #059669; }
+        .grade-d { background: #dbeafe; color: #2563eb; }
+        .grade-c { background: #fef3c7; color: #d97706; }
+        .grade-b { background: #fee2e2; color: #dc2626; }
+        .grade-a { background: #f3e8ff; color: #9333ea; }
+        
+        /* Grade Distribution */
+        .grade-distribution-card {
+            margin-bottom: 20px;
+        }
+        
+        .grade-distribution-grid {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            flex-wrap: wrap;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+        
+        .grade-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 12px;
+            min-width: 80px;
+        }
+        
+        .grade-letter {
+            display: block;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .grade-range {
+            display: block;
+            font-size: 9px;
+            margin-top: 5px;
+        }
+        
+        .grade-count {
+            display: block;
+            font-size: 9px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+        
+        /* Final Score Card */
+        .final-score-card {
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            color: white;
+        }
+        
+        .score-circle {
+            text-align: center;
+        }
+        
+        .score-number {
+            font-size: 36px;
+            font-weight: 700;
+        }
+        
+        .score-number span {
+            font-size: 14px;
+        }
+        
+        .score-label {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .score-details {
+            text-align: right;
+        }
+        
+        .detail-row {
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+        
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-note {
+            font-size: 9px;
+            color: #64748b;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .footer-signatures {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+        
+        .signature {
+            text-align: center;
+        }
+        
+        .signature-line {
+            width: 120px;
+            height: 1px;
+            background: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .signature p {
+            font-size: 9px;
+            color: #64748b;
+            margin: 0;
+        }
+        
+        .footer-date {
+            font-size: 8px;
+            color: #94a3b8;
+        }
+        
+        /* Grade text colors */
+        .grade-e { color: #059669; font-weight: bold; }
+        .grade-d { color: #2563eb; font-weight: bold; }
+        .grade-c { color: #d97706; font-weight: bold; }
+        .grade-b { color: #dc2626; font-weight: bold; }
+        .grade-a { color: #9333ea; font-weight: bold; }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

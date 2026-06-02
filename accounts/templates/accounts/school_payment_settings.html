@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Settings{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>💰 M-Pesa Payment Settings</h1>
+    <p>Configure your school's M-Pesa to receive parent payments</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h3>M-Pesa API Configuration</h3>
+    </div>
+    
+    <form method="POST" id="mpesaConfigForm">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Paybill/Till Number</label>
+            {{ form.shortcode }}
+            <small>Your school's Paybill or Till number from Safaricom</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Consumer Key</label>
+            {{ form.consumer_key }}
+            <small>From your Safaricom Developer Portal app</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Consumer Secret</label>
+            {{ form.consumer_secret }}
+            <small>From your Safaricom Developer Portal app</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Passkey</label>
+            {{ form.passkey }}
+            <small>For Paybill integration (not needed for Till)</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Environment</label>
+            {{ form.environment }}
+            <small>Use Sandbox for testing, Production for live payments</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Settings</button>
+            <button type="button" id="testConnectionBtn" class="btn-secondary">Test Connection</button>
+        </div>
+    </form>
+    
+    <div id="testResult" style="margin-top: 20px; display: none;">
+        <!-- Test result will appear here -->
+    </div>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <div class="card-header">
+        <h3>📋 How to Get Your M-Pesa API Credentials</h3>
+    </div>
+    <div class="help-content">
+        <ol>
+            <li>Go to <a href="https://developer.safaricom.co.ke" target="_blank">developer.safaricom.co.ke</a></li>
+            <li>Create an account or login</li>
+            <li>Go to "My Apps" and click "Create App"</li>
+            <li>Select "Lipa Na M-Pesa Sandbox" as the product</li>
+            <li>Copy your Consumer Key and Consumer Secret</li>
+            <li>For Paybill, get your Passkey from the same portal</li>
+            <li>Enter all details above and click "Test Connection"</li>
+        </ol>
+        <p class="help-note">💡 Need help? Contact support for assistance setting up your M-Pesa.</p>
+    </div>
+</div>
+
+<script>
+document.getElementById('testConnectionBtn').addEventListener('click', function() {
+    const form = document.getElementById('mpesaConfigForm');
+    const formData = new FormData(form);
+    const testResult = document.getElementById('testResult');
+    
+    // Show loading
+    testResult.style.display = 'block';
+    testResult.innerHTML = '<div class="alert alert-info">Testing connection... Please wait.</div>';
+    
+    fetch("{% url 'test_mpesa_connection' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            testResult.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+        } else {
+            testResult.innerHTML = `<div class="alert alert-error">❌ ${data.message}</div>`;
+        }
+    })
+    .catch(error => {
+        testResult.innerHTML = '<div class="alert alert-error">❌ Connection failed. Please check your credentials.</div>';
+    });
+});
+</script>
+
+<style>
+.help-content ol {
+    margin-left: 20px;
+    line-height: 1.8;
+}
+.help-note {
+    margin-top: 15px;
+    padding: 10px;
+    background: #fef3c7;
+    border-radius: 8px;
+    color: #92400e;
+}
+</style>
+
+{% endblock %}

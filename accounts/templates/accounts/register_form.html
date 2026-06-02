@@ -11,23 +11,66 @@
         <p>Select the type of user you want to register</p>
     </div>
     
-    <!-- Tab Buttons -->
+    <!-- ========== TAB BUTTONS - FINAL WORKFLOW ========== -->
     <div class="register-tabs">
-        <button class="tab-btn active" data-tab="student">
-            <i class="fas fa-user-graduate"></i> Student
-        </button>
-        <button class="tab-btn" data-tab="teacher">
-            <i class="fas fa-chalkboard-user"></i> Teacher
-        </button>
-        <button class="tab-btn" data-tab="parent">
-            <i class="fas fa-users"></i> Parent
-        </button>
+        
+        <!-- SUPER ADMIN - Can ONLY register School Admin -->
+        {% if request.user.role == 'SUPER_ADMIN' %}
+            <button class="tab-btn active" data-tab="admin">
+                <i class="fas fa-user-tie"></i> School Admin
+            </button>
+        
+        <!-- SCHOOL ADMIN - Can ONLY register Head Teacher -->
+        {% elif request.user.role == 'ADMIN' %}
+            <button class="tab-btn active" data-tab="headteacher">
+                <i class="fas fa-user-tie"></i> Head Teacher
+            </button>
+        
+        <!-- HEAD TEACHER - Can register Teachers + emergency Student/Parent -->
+        {% elif request.user.role == 'HEAD_TEACHER' %}
+            <button class="tab-btn active" data-tab="teacher">
+                <i class="fas fa-chalkboard-user"></i> Teacher
+            </button>
+            <button class="tab-btn" data-tab="student">
+                <i class="fas fa-user-graduate"></i> Student (Emergency)
+            </button>
+            <button class="tab-btn" data-tab="parent">
+                <i class="fas fa-users"></i> Parent (Emergency)
+            </button>
+            <small class="tab-note">Note: Class teachers should register their own students normally</small>
+        
+        <!-- CLASS TEACHER (Teacher with class_teacher role) - Can register Students + Parents -->
+        {% elif request.user.role == 'TEACHER' %}
+            {% if my_classes %}
+                <button class="tab-btn active" data-tab="student">
+                    <i class="fas fa-user-graduate"></i> Student (My Class)
+                </button>
+                <button class="tab-btn" data-tab="parent">
+                    <i class="fas fa-users"></i> Parent
+                </button>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-lock"></i> You are not assigned as a class teacher.
+                    <br><small>Only Class Teachers can register students and parents. Please contact the Head Teacher.</small>
+                </div>
+            {% endif %}
+        
+        <!-- Other roles - No access -->
+        {% else %}
+            <div class="alert alert-warning">
+                You don't have permission to register users.
+            </div>
+        {% endif %}
+        
     </div>
     
-    <!-- Student Registration Form (UPDATED) -->
-    <div id="student-form" class="register-form active">
-        <h2>Register New Student</h2>
-        <form method="POST" action="{% url 'register_students' %}">
+    <!-- ========== SCHOOL ADMIN REGISTRATION (SUPER ADMIN ONLY) ========== -->
+    {% if request.user.role == 'SUPER_ADMIN' %}
+    <div id="admin-form" class="register-form active">
+        <h2>Register School Administrator</h2>
+        <p class="form-description">Create an admin account for a specific school. The School Admin handles finance and registers the Head Teacher.</p>
+        
+        <form method="POST" action="{% url 'register_admin' %}">
             {% csrf_token %}
             <div class="form-row">
                 <div class="form-group">
@@ -39,189 +82,410 @@
                     <input type="text" name="last_name" placeholder="Enter last name" required>
                 </div>
             </div>
+            
             <div class="form-row">
                 <div class="form-group">
                     <label>Email Address <span class="required">*</span></label>
-                    <input type="email" name="email" placeholder="student@example.com" required>
+                    <input type="email" name="email" placeholder="admin@school.com" required>
                 </div>
-                <div class="form-group">
-                    <label>Admission Number <span class="required">*</span></label>
-                    <input type="text" name="admission_number" placeholder="e.g., ADM-001" required>
-                    <small>This will be the student's username</small>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Grade Level <span class="required">*</span></label>
-                    <select name="grade_level" required>
-                        <option value="">Select Grade</option>
-                        {% for classroom in classrooms %}
-                            <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Gender <span class="required">*</span></label>
-                    <select name="gender" required>
-                        <option value="">Select Gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone_number" placeholder="Student's phone">
-                </div>
-                <div class="form-group">
-                    <label>Assign Parent (Optional)</label>
-                    <select name="parent_id">
-                        <option value="">-- Select Parent --</option>
-                        {% for parent in parents %}
-                            <option value="{{ parent.id }}">{{ parent.get_full_name|default:parent.username }} - {{ parent.phone_number|default:"No phone" }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            
-            <!-- ✅ NEW: Leadership Checkbox -->
-            <div class="form-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="has_leadership" value="true">
-                    <span>Has Leadership Position</span>
-                </label>
-                <small>e.g., Class Prefect, Sports Captain, Head Boy/Girl</small>
-            </div>
-            
-            <!-- ✅ NEW: Residential Address -->
-            <div class="form-group">
-                <label>Residential Address</label>
-                <textarea name="address" rows="2" placeholder="Enter student's home address"></textarea>
-                <small>Where the student resides</small>
-            </div>
-            
-            <!-- ✅ NEW: Medical Condition -->
-            <div class="form-group">
-                <label>Medical Condition</label>
-                <textarea name="medical_condition" rows="2" placeholder="Any underlying medical conditions (allergies, asthma, etc.)"></textarea>
-                <small>Optional: Please provide any important medical information</small>
-            </div>
-            
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">Register Student</button>
-            </div>
-        </form>
-    </div>
-    
-    <!-- Teacher Registration Form (UPDATED - Removed department, added date_of_joining) -->
-    <!-- Teacher Registration Form - Updated (Subject is now OPTIONAL) -->
-<div id="teacher-form" class="register-form">
-    <h2>Register New Teacher</h2>
-    <form method="POST" action="{% url 'register_teacher' %}">
-        {% csrf_token %}
-        <div class="form-row">
-            <div class="form-group">
-                <label>First Name <span class="required">*</span></label>
-                <input type="text" name="first_name" placeholder="Enter first name" required>
-            </div>
-            <div class="form-group">
-                <label>Last Name <span class="required">*</span></label>
-                <input type="text" name="last_name" placeholder="Enter last name" required>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Email Address <span class="required">*</span></label>
-                <input type="email" name="email" placeholder="teacher@school.com" required>
-            </div>
-            <div class="form-group">
-                <label>TSC Number / Employee ID <span class="required">*</span></label>
-                <input type="text" name="tsc_number" placeholder="e.g., TCH-001" required>
-                <small>This will be the teacher's username</small>
-            </div>
-        </div>
-        
-        <!-- Date of Joining -->
-        <div class="form-row">
-            <div class="form-group">
-                <label>Date of Joining <span class="required">*</span></label>
-                <input type="date" name="date_of_joining" required>
-                <small>When the teacher started working</small>
-            </div>
-            <div class="form-group">
-                <label>Years of Experience <span class="required">*</span></label>
-                <input type="number" name="experience" required step="0.5" min="0" placeholder="e.g., 5.5">
-                <small>Total teaching experience</small>
-            </div>
-        </div>
-        
-        <!-- ✅ CHANGED: Assigned Subject is now OPTIONAL -->
-        <div class="form-group">
-            <label>Assigned Subject <span class="optional">(Optional)</span></label>
-            <select name="assigned_subject">
-                <option value="">-- Select Subject (Optional) --</option>
-                {% for subject in subjects %}
-                    <option value="{{ subject.id }}">{{ subject.name }} ({{ subject.code }})</option>
-                {% endfor %}
-            </select>
-            <small>You can assign a subject now or later in Subjects section</small>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label>Phone Number <span class="required">*</span></label>
-                <input type="tel" name="phone" placeholder="+254..." required>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>Residential Address</label>
-            <input type="text" name="address" placeholder="e.g., Nairobi, Kenya">
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Register Teacher</button>
-        </div>
-    </form>
-</div>
-    
-    <!-- Parent Registration Form (unchanged) -->
-    <div id="parent-form" class="register-form">
-        <h2>Register New Parent</h2>
-        <form method="POST" action="{% url 'register_parents' %}">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group">
-                    <label>First Name <span class="required">*</span></label>
-                    <input type="text" name="first_name" placeholder="Enter first name" required>
-                </div>
-                <div class="form-group">
-                    <label>Last Name <span class="required">*</span></label>
-                    <input type="text" name="last_name" placeholder="Enter last name" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Email Address <span class="required">*</span></label>
-                    <input type="email" name="email" placeholder="parent@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label>ID Number <span class="required">*</span></label>
-                    <input type="text" name="id_number" placeholder="e.g., 12345678" required>
-                    <small>This will be the parent's username</small>
-                </div>
-            </div>
-            <div class="form-row">
                 <div class="form-group">
                     <label>Phone Number <span class="required">*</span></label>
                     <input type="tel" name="phone_number" placeholder="e.g., 0712345678" required>
                 </div>
             </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Username <span class="required">*</span></label>
+                    <input type="text" name="username" placeholder="e.g., alpha_admin" required>
+                    <small>Unique login username</small>
+                </div>
+                <div class="form-group">
+                    <label>Select School <span class="required">*</span></label>
+                    <select name="school_id" required>
+                        <option value="">-- Select School --</option>
+                        {% for school in schools %}
+                            <option value="{{ school.id }}">{{ school.name }} ({{ school.code }})</option>
+                        {% endfor %}
+                    </select>
+                    <small>Which school will this admin manage?</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Password <span class="required">*</span></label>
+                    <input type="password" name="password" placeholder="Enter password" required>
+                    <small>Minimum 6 characters</small>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password <span class="required">*</span></label>
+                    <input type="password" name="password_confirm" placeholder="Confirm password" required>
+                </div>
+            </div>
+            
             <div class="form-actions">
-                <button type="submit" class="btn-primary">Register Parent</button>
+                <button type="submit" class="btn-primary">Register School Admin</button>
             </div>
         </form>
+    </div>
+    {% endif %}
+    
+    <!-- ========== HEAD TEACHER REGISTRATION (SCHOOL ADMIN ONLY) ========== -->
+    {% if request.user.role == 'ADMIN' %}
+    <div id="headteacher-form" class="register-form active">
+        <h2>Register Head Teacher</h2>
+        <p class="form-description">Create a head teacher account. The Head Teacher manages academic operations including teachers, classes, and subject allocations.</p>
+        
+        <form method="POST" action="{% url 'register_head_teacher' %}">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label>First Name <span class="required">*</span></label>
+                    <input type="text" name="first_name" placeholder="Enter first name" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name <span class="required">*</span></label>
+                    <input type="text" name="last_name" placeholder="Enter last name" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" name="email" placeholder="headteacher@school.com" required>
+                </div>
+                <div class="form-group">
+                    <label>TSC Number / Employee ID <span class="required">*</span></label>
+                    <input type="text" name="tsc_number" placeholder="e.g., TCH-001" required>
+                    <small>This will be the username</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Phone Number <span class="required">*</span></label>
+                    <input type="tel" name="phone" placeholder="+254..." required>
+                </div>
+                <div class="form-group">
+                    <label>Date of Appointment</label>
+                    <input type="date" name="date_appointed">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Qualifications</label>
+                <textarea name="qualifications" rows="3" placeholder="Academic and professional qualifications..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Register Head Teacher</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+    
+    <!-- ========== TEACHER REGISTRATION (HEAD TEACHER ONLY) ========== -->
+    {% if request.user.role == 'HEAD_TEACHER' %}
+    <div id="teacher-form" class="register-form active">
+        <h2>Register New Teacher</h2>
+        <p class="form-description">Create teacher accounts. After registration, you can assign them to subjects, classes, and designate class teachers.</p>
+        
+        <form method="POST" action="{% url 'register_teacher' %}">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label>First Name <span class="required">*</span></label>
+                    <input type="text" name="first_name" placeholder="Enter first name" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name <span class="required">*</span></label>
+                    <input type="text" name="last_name" placeholder="Enter last name" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" name="email" placeholder="teacher@school.com" required>
+                </div>
+                <div class="form-group">
+                    <label>TSC Number / Employee ID <span class="required">*</span></label>
+                    <input type="text" name="tsc_number" placeholder="e.g., TCH-001" required>
+                    <small>This will be the teacher's username</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date of Joining <span class="required">*</span></label>
+                    <input type="date" name="date_of_joining" required>
+                    <small>When the teacher started working</small>
+                </div>
+                <div class="form-group">
+                    <label>Years of Experience <span class="required">*</span></label>
+                    <input type="number" name="experience" required step="0.5" min="0" placeholder="e.g., 5.5">
+                    <small>Total teaching experience</small>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Phone Number <span class="required">*</span></label>
+                    <input type="tel" name="phone" placeholder="+254..." required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Residential Address</label>
+                <input type="text" name="address" placeholder="e.g., Nairobi, Kenya">
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Register Teacher</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+    
+    <!-- ========== STUDENT REGISTRATION (CLASS TEACHER + HEAD TEACHER Emergency) ========== -->
+    {% if request.user.role == 'HEAD_TEACHER' or request.user.role == 'TEACHER' %}
+        {% if request.user.role == 'TEACHER' and not my_classes %}
+            {# Skip - teacher is not class teacher #}
+        {% else %}
+        <div id="student-form" class="register-form">
+            <h2>Register New Student</h2>
+            {% if request.user.role == 'HEAD_TEACHER' %}
+            <p class="form-description emergency-note">
+                <i class="fas fa-exclamation-triangle"></i> EMERGENCY REGISTRATION
+                <br>Use this only when a class teacher is unavailable. Class teachers should register their own students normally.
+            </p>
+            {% else %}
+            <p class="form-description">Add a student to your class. The student will get login credentials with their admission number.</p>
+            {% endif %}
+            
+            <form method="POST" action="{% url 'register_students' %}" id="studentRegistrationForm">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" name="first_name" placeholder="Enter first name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" name="last_name" placeholder="Enter last name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email Address <span class="required">*</span></label>
+                        <input type="email" name="email" placeholder="student@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Admission Number <span class="required">*</span></label>
+                        <input type="text" name="admission_number" placeholder="e.g., NAC-2026-001" required>
+                        <small>This will be the student's username</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Class <span class="required">*</span></label>
+                        <select name="grade_level" required>
+                            <option value="">Select Class</option>
+                            {% if request.user.role == 'HEAD_TEACHER' %}
+                                {% for classroom in classrooms %}
+                                    <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
+                                {% endfor %}
+                            {% else %}
+                                {% for classroom in my_classes %}
+                                    <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                        {% if request.user.role == 'TEACHER' %}
+                            <small>Only classes where you are the class teacher</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label>Gender <span class="required">*</span></label>
+                        <select name="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="phone_number" placeholder="Student's phone">
+                    </div>
+                    
+                    <!-- ========== SEARCHABLE PARENT SELECTOR ========== -->
+                    <div class="form-group">
+                        <label>Parent/Guardian</label>
+                        <div class="parent-search-container">
+                            <div class="search-input-group">
+                                <i class="fas fa-search"></i>
+                                <input type="text" 
+                                       id="parentSearch" 
+                                       class="form-control" 
+                                       placeholder="Search by name, ID number, or phone number..."
+                                       autocomplete="off">
+                            </div>
+                            
+                            <select name="parent_id" id="parentSelect" style="display: none;">
+                                <option value="">-- Select Parent --</option>
+                                {% for parent in parents %}
+                                    <option value="{{ parent.id }}" 
+                                            data-name="{{ parent.get_full_name|default:parent.username }}" 
+                                            data-phone="{{ parent.phone_number|default:'' }}" 
+                                            data-id="{{ parent.username }}">
+                                        {{ parent.get_full_name|default:parent.username }} - {{ parent.phone_number|default:"No phone" }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            
+                            <div id="parentSearchResults" class="search-results-dropdown" style="display: none;"></div>
+                            
+                            <div class="add-parent-section" style="margin-top: 0.75rem;">
+                                <button type="button" id="showAddParentBtn" class="btn-link">
+                                    <i class="fas fa-plus-circle"></i> Can't find the parent? Add New Parent
+                                </button>
+                            </div>
+                        </div>
+                        <small>Search for existing parent or click the link to add a new one</small>
+                    </div>
+                </div>
+                
+                <!-- Hidden field to store selected parent ID -->
+                <input type="hidden" name="parent_id_hidden" id="parentIdHidden" value="">
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="has_leadership" value="true">
+                        <span>Has Leadership Position</span>
+                    </label>
+                    <small>e.g., Class Prefect, Sports Captain, Head Boy/Girl</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Residential Address</label>
+                    <textarea name="address" rows="2" placeholder="Enter student's home address"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Medical Condition</label>
+                    <textarea name="medical_condition" rows="2" placeholder="Any underlying medical conditions (allergies, asthma, etc.)"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Register Student</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- ========== PARENT REGISTRATION (CLASS TEACHER + HEAD TEACHER Emergency) ========== -->
+    {% if request.user.role == 'HEAD_TEACHER' or request.user.role == 'TEACHER' %}
+        {% if request.user.role == 'TEACHER' and not my_classes %}
+            {# Skip - teacher is not class teacher #}
+        {% else %}
+        <div id="parent-form" class="register-form">
+            <h2>Register New Parent</h2>
+            {% if request.user.role == 'HEAD_TEACHER' %}
+                <p class="form-description emergency-note">
+                    <i class="fas fa-exclamation-triangle"></i> EMERGENCY REGISTRATION
+                    <br>Use this only when a class teacher is unavailable. Class teachers should register their own parents normally.
+                </p>
+            {% else %}
+                <p class="form-description">Register a parent/guardian for your students. After registration, you can link them to students.</p>
+            {% endif %}
+            
+            <form method="POST" action="{% url 'register_parents' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" name="first_name" placeholder="Enter first name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" name="last_name" placeholder="Enter last name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email Address <span class="required">*</span></label>
+                        <input type="email" name="email" placeholder="parent@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ID Number <span class="required">*</span></label>
+                        <input type="text" name="id_number" placeholder="e.g., 12345678" required>
+                        <small>This will be the parent's username</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone Number <span class="required">*</span></label>
+                        <input type="tel" name="phone_number" placeholder="e.g., 0712345678" required>
+                        <small>Used for M-Pesa fee payments</small>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Register Parent</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+<!-- ========== ADD PARENT MODAL ========== -->
+<div id="addParentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-plus"></i> Add New Parent</h3>
+            <button type="button" class="modal-close" onclick="closeAddParentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addParentForm">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" id="parentFirstName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" id="parentLastName" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email Address <span class="required">*</span></label>
+                        <input type="email" id="parentEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ID Number <span class="required">*</span></label>
+                        <input type="text" id="parentIdNumber" class="form-control" placeholder="e.g., 12345678" required>
+                        <small>This will be the parent's username</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="parentPhone" class="form-control" placeholder="e.g., 0712345678" required>
+                        <small>Used for M-Pesa fee payments</small>
+                    </div>
+                </div>
+                <div id="addParentMessage" class="alert" style="display: none;"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Add Parent</button>
+                    <button type="button" class="btn-secondary" onclick="closeAddParentModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -242,6 +506,7 @@
     gap: 10px;
     margin-bottom: 30px;
     border-bottom: 1px solid #ddd;
+    flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -255,9 +520,22 @@
     transition: all 0.3s;
 }
 
+.tab-btn:hover {
+    color: #2563eb;
+}
+
 .tab-btn.active {
-    color: #28a745;
-    border-bottom: 2px solid #28a745;
+    color: #2563eb;
+    border-bottom: 2px solid #2563eb;
+}
+
+.tab-note {
+    display: block;
+    width: 100%;
+    font-size: 11px;
+    color: #f59e0b;
+    margin-top: 5px;
+    margin-bottom: -15px;
 }
 
 .register-form {
@@ -272,77 +550,324 @@
     display: flex;
     gap: 20px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .form-group {
     flex: 1;
+    min-width: 200px;
     margin-bottom: 15px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #374151;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     font-size: 14px;
+    transition: all 0.2s;
 }
 
-.form-group textarea {
-    resize: vertical;
-    font-family: inherit;
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .required {
-    color: #dc3545;
+    color: #dc2626;
 }
 
 small {
     display: block;
-    font-size: 12px;
-    color: #666;
-    margin-top: 4px;
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 5px;
+}
+
+.form-description {
+    background: #dbeafe;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #1e40af;
+}
+
+.emergency-note {
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.emergency-note i {
+    margin-right: 5px;
 }
 
 .checkbox-label {
     display: flex;
     align-items: center;
+    gap: 10px;
     cursor: pointer;
 }
 
 .checkbox-label input {
     width: auto;
-    margin-right: 10px;
 }
 
 .form-actions {
-    margin-top: 20px;
+    margin-top: 25px;
     text-align: center;
 }
 
 .btn-primary {
-    background: #28a745;
+    background: linear-gradient(135deg, #2563eb, #10b981);
     color: white;
-    padding: 10px 30px;
+    padding: 12px 32px;
     border: none;
-    border-radius: 4px;
+    border-radius: 40px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
 .btn-primary:hover {
-    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid #f59e0b;
+}
+
+/* ========== PARENT SEARCH STYLES ========== */
+.parent-search-container {
+    position: relative;
+}
+
+.search-input-group {
+    position: relative;
+}
+
+.search-input-group i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    z-index: 1;
+}
+
+.search-input-group input {
+    padding-left: 35px !important;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+.search-result-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+}
+
+.search-result-item:hover {
+    background: #f8fafc;
+}
+
+.search-result-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1e293b;
+}
+
+.search-result-details {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.search-result-details i {
+    margin-right: 4px;
+}
+
+.no-results {
+    padding: 15px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+}
+
+/* ========== MODAL STYLES ========== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: fadeInUp 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.alert {
+    padding: 10px 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    font-size: 0.8rem;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #059669;
+    border-left: 3px solid #10b981;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #dc2626;
+    border-left: 3px solid #ef4444;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .register-container {
+        padding: 15px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .register-tabs {
+        flex-direction: column;
+        border-bottom: none;
+    }
+    
+    .tab-btn {
+        text-align: left;
+        border-left: 3px solid transparent;
+        border-bottom: none;
+    }
+    
+    .tab-btn.active {
+        border-left-color: #2563eb;
+        border-bottom: none;
+    }
+    
+    .tab-note {
+        margin-left: 15px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
 }
 </style>
 
 <script>
+    // Tab switching
     const tabBtns = document.querySelectorAll('.tab-btn');
     const forms = document.querySelectorAll('.register-form');
     
@@ -352,9 +877,193 @@ small {
             this.classList.add('active');
             forms.forEach(form => form.classList.remove('active'));
             const tabId = this.getAttribute('data-tab');
-            document.getElementById(`${tabId}-form`).classList.add('active');
+            const targetForm = document.getElementById(`${tabId}-form`);
+            if (targetForm) {
+                targetForm.classList.add('active');
+            }
         });
     });
+    
+    // ========== PARENT SEARCH FUNCTIONALITY ==========
+    const parentSelect = document.getElementById('parentSelect');
+    const parentSearch = document.getElementById('parentSearch');
+    const searchResults = document.getElementById('parentSearchResults');
+    const showAddParentBtn = document.getElementById('showAddParentBtn');
+    const addParentModal = document.getElementById('addParentModal');
+    const parentIdHidden = document.getElementById('parentIdHidden');
+    
+    // Get all parents data from the select options
+    let parentsList = [];
+    if (parentSelect) {
+        parentsList = Array.from(parentSelect.querySelectorAll('option')).filter(opt => opt.value).map(opt => ({
+            id: opt.value,
+            name: opt.getAttribute('data-name') || opt.textContent.split(' - ')[0],
+            phone: opt.getAttribute('data-phone') || '',
+            idNumber: opt.getAttribute('data-id') || ''
+        }));
+    }
+    
+    // Search function
+    function searchParents(query) {
+        if (!query || query.length < 2) {
+            if (searchResults) searchResults.style.display = 'none';
+            return [];
+        }
+        
+        const lowerQuery = query.toLowerCase();
+        const results = parentsList.filter(parent => 
+            parent.name.toLowerCase().includes(lowerQuery) ||
+            parent.phone.includes(lowerQuery) ||
+            parent.idNumber.includes(lowerQuery)
+        );
+        
+        displaySearchResults(results, query);
+        return results;
+    }
+    
+    // Display search results
+    function displaySearchResults(results, query) {
+        if (!searchResults) return;
+        
+        if (results.length === 0) {
+            searchResults.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-user-slash"></i> No parents found matching "${query}"
+                </div>
+            `;
+            searchResults.style.display = 'block';
+            return;
+        }
+        
+        searchResults.innerHTML = results.map(parent => `
+            <div class="search-result-item" onclick="selectParent('${parent.id}', '${parent.name.replace(/'/g, "\\'")}')">
+                <div class="search-result-name">${parent.name}</div>
+                <div class="search-result-details">
+                    <i class="fas fa-id-card"></i> ID: ${parent.idNumber} &nbsp;|&nbsp;
+                    <i class="fas fa-phone"></i> ${parent.phone || 'No phone'}
+                </div>
+            </div>
+        `).join('');
+        searchResults.style.display = 'block';
+    }
+    
+    // Select parent from search
+    window.selectParent = function(parentId, parentName) {
+        if (parentSelect) parentSelect.value = parentId;
+        if (parentSearch) parentSearch.value = parentName;
+        if (parentIdHidden) parentIdHidden.value = parentId;
+        if (searchResults) searchResults.style.display = 'none';
+        
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        if (parentSelect) parentSelect.dispatchEvent(event);
+    };
+    
+    // Search input handler
+    if (parentSearch) {
+        parentSearch.addEventListener('input', function(e) {
+            searchParents(e.target.value);
+        });
+    }
+    
+    // Hide results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (searchResults && parentSearch && !parentSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+    
+    // Show Add Parent Modal
+    if (showAddParentBtn) {
+        showAddParentBtn.addEventListener('click', function() {
+            if (addParentModal) addParentModal.style.display = 'flex';
+        });
+    }
+    
+    function closeAddParentModal() {
+        if (addParentModal) addParentModal.style.display = 'none';
+        const form = document.getElementById('addParentForm');
+        if (form) form.reset();
+        const msg = document.getElementById('addParentMessage');
+        if (msg) msg.style.display = 'none';
+    }
+    
+    window.closeAddParentModal = closeAddParentModal;
+    
+    // Handle Add Parent Form Submission
+    const addParentForm = document.getElementById('addParentForm');
+    if (addParentForm) {
+        addParentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('first_name', document.getElementById('parentFirstName').value);
+            formData.append('last_name', document.getElementById('parentLastName').value);
+            formData.append('email', document.getElementById('parentEmail').value);
+            formData.append('id_number', document.getElementById('parentIdNumber').value);
+            formData.append('phone_number', document.getElementById('parentPhone').value);
+            
+            const messageDiv = document.getElementById('addParentMessage');
+            
+            try {
+                const response = await fetch('/register-parents/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (messageDiv) {
+                        messageDiv.className = 'alert alert-success';
+                        messageDiv.innerHTML = '<i class="fas fa-check-circle"></i> Parent added successfully!';
+                        messageDiv.style.display = 'block';
+                    }
+                    
+                    // Add new parent to the select and parentsList
+                    if (parentSelect) {
+                        const newOption = document.createElement('option');
+                        newOption.value = data.parent_id;
+                        newOption.textContent = `${data.parent_name} - ${data.parent_phone}`;
+                        newOption.setAttribute('data-name', data.parent_name);
+                        newOption.setAttribute('data-phone', data.parent_phone);
+                        newOption.setAttribute('data-id', data.parent_id_number);
+                        parentSelect.appendChild(newOption);
+                    }
+                    
+                    // Add to parentsList array
+                    parentsList.push({
+                        id: data.parent_id,
+                        name: data.parent_name,
+                        phone: data.parent_phone,
+                        idNumber: data.parent_id_number
+                    });
+                    
+                    // Auto-select the new parent
+                    setTimeout(() => {
+                        selectParent(data.parent_id, data.parent_name);
+                        closeAddParentModal();
+                    }, 1500);
+                    
+                } else {
+                    if (messageDiv) {
+                        messageDiv.className = 'alert alert-error';
+                        messageDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.error}`;
+                        messageDiv.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                if (messageDiv) {
+                    messageDiv.className = 'alert alert-error';
+                    messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error adding parent. Please try again.';
+                    messageDiv.style.display = 'block';
+                }
+            }
+        });
+    }
 </script>
 
 {% endblock %}

@@ -5,110 +5,83 @@
 
 {% block content %}
 
-<div class="list-header">
-    <div class="list-title">
-        <h1>Classrooms</h1>
-        <p>View all classes and their students</p>
-    </div>
-    {% if request.user.role == 'SUPER_ADMIN' %}
-    <a href="{% url 'add_classroom' %}" class="add-btn">
-        <i class="fas fa-plus"></i> Add Classroom
-    </a>
-    {% endif %}
+<div class="dashboard-header">
+    <h1>🏫 Classrooms</h1>
+    <p>View all classes and their students</p>
 </div>
 
-<!-- Search Bar -->
-<div class="search-container">
-    <form method="GET" class="search-form">
-        <div class="search-input-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" name="search" placeholder="Search by class name or stream..." value="{{ search_query }}">
-        </div>
-        <button type="submit" class="search-btn">Search</button>
-        {% if search_query %}
-        <a href="{% url 'classroom_list' %}" class="clear-btn">Clear</a>
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-building"></i> All Classrooms</h3>
+        {% if request.user.role == 'HEAD_TEACHER' or request.user.role == 'ADMIN' %}
+        <a href="{% url 'add_classroom' %}" class="btn-primary"><i class="fas fa-plus"></i> Add Classroom</a>
         {% endif %}
-    </form>
-</div>
-
-<!-- Classroom Cards Grid -->
-<div class="classrooms-grid">
-    {% for classroom in classrooms %}
-    <div class="classroom-card" onclick="toggleStudents('class-{{ classroom.id }}')">
-        <div class="card-header">
-            <div class="class-icon">
-                <i class="fas fa-building"></i>
-            </div>
-            <div class="class-info">
-                <h3>{{ classroom.name }} {% if classroom.stream %}{{ classroom.stream }}{% endif %}</h3>
-                <div class="class-meta">
-                    <span><i class="fas fa-users"></i> {{ classroom.get_students_count }} Students</span>
-                    <span><i class="fas fa-user-tie"></i> {{ classroom.class_teacher.get_full_name|default:"No Teacher" }}</span>
-                    <span><i class="fas fa-chart-line"></i> Status: {{ classroom.get_capacity_status }}</span>
-                    <span><i class="fas fa-coins"></i> KES {{ classroom.fee_amount|floatformat:0 }}/month</span>
-                </div>
-            </div>
-            <div class="card-arrow">
-                <i class="fas fa-chevron-down"></i>
-            </div>
-        </div>
-        
-        <!-- Student List (Hidden by default) -->
-        <div id="class-{{ classroom.id }}" class="students-list" style="display: none;">
-            <div class="students-header">
-                <h4><i class="fas fa-user-graduate"></i> Students in {{ classroom.name }} {% if classroom.stream %}{{ classroom.stream }}{% endif %}</h4>
-                <span class="student-count">{{ classroom.students.count }} total</span>
-            </div>
-            {% if classroom.students.all %}
-            <div class="students-grid">
-                {% for student in classroom.students.all %}
-                <a href="{% url 'students_detail' student.id %}" class="student-card-link">
-                    <div class="student-card-mini">
-                        <div class="student-avatar-mini">
-                            {{ student.first_name|first }}{{ student.last_name|first }}
-                        </div>
-                        <div class="student-info-mini">
-                            <strong>{{ student.first_name }} {{ student.last_name }}</strong>
-                            <span>{{ student.registration_number }}</span>
-                        </div>
-                    </div>
-                </a>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table-modern">
+            <thead>
+                <tr>
+                    <th>Class Name</th>
+                    <th>Stream</th>
+                    <th>Class Teacher</th>
+                    <th>Students</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for classroom in classrooms %}
+                <tr>
+                    <td><strong>{{ classroom.name }}</strong></td>
+                    <td>{{ classroom.stream|default:"-" }}</td>
+                    <td>{{ classroom.class_teacher.get_full_name|default:"Not Assigned" }}</td>
+                    <td>{{ classroom.get_students_count }}</td>
+                    <td>
+                        {% if classroom.get_capacity_status == 'Full' %}
+                            <span class="status-badge status-full">🔴 Full</span>
+                        {% elif classroom.get_capacity_status == 'Nearly Full' %}
+                            <span class="status-badge status-warning">🟠 Nearly Full</span>
+                        {% else %}
+                            <span class="status-badge status-success">🟢 Available</span>
+                        {% endif %}
+                    </td>
+                    <td><a href="#" class="btn-view">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state">No classrooms found. <a href="{% url 'add_classroom' %}">Add one</a>{% if request.user.role == 'SUPER_ADMIN' %} or contact Super Admin{% endif %}</td></tr>
                 {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-students">
-                <i class="fas fa-user-slash"></i>
-                <p>No students enrolled in this class yet</p>
-                <a href="{% url 'register_page' %}" class="small-btn">Add Student</a>
-            </div>
-            {% endif %}
-        </div>
+            </tbody>
+        </table>
     </div>
-    {% empty %}
-    <div class="empty-state-card">
-        <i class="fas fa-school"></i>
-        <p>No classrooms found</p>
-        {% if request.user.role == 'SUPER_ADMIN' %}
-        <a href="{% url 'add_classroom' %}" class="add-btn">Add Your First Classroom</a>
-        {% endif %}
-    </div>
-    {% endfor %}
 </div>
 
-<script>
-    function toggleStudents(id) {
-        const element = document.getElementById(id);
-        const card = element.closest('.classroom-card');
-        const arrow = card.querySelector('.card-arrow i');
-        
-        if (element.style.display === 'none') {
-            element.style.display = 'block';
-            arrow.style.transform = 'rotate(180deg)';
-        } else {
-            element.style.display = 'none';
-            arrow.style.transform = 'rotate(0deg)';
-        }
-    }
-</script>
+<style>
+.data-table-modern {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table-modern th {
+    padding: 1rem;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: left;
+}
+.data-table-modern td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+}
+.status-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+}
+.status-full { background: #fee2e2; color: #dc2626; }
+.status-warning { background: #fef3c7; color: #d97706; }
+.status-success { background: #d1fae5; color: #059669; }
+.btn-view { background: #dbeafe; color: #2563eb; padding: 0.25rem 0.75rem; border-radius: 8px; text-decoration: none; font-size: 0.7rem; }
+</style>
 
 {% endblock %}

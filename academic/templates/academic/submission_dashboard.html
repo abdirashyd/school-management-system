@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Submission Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>📊 Results Submission Dashboard</h1>
+    <p>Track submission progress and publish results</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Exam Filter -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-header">
+        <h3>Select Exam</h3>
+    </div>
+    <form method="GET" action="{% url 'submission_dashboard' %}">
+        <div class="form-row" style="padding: 15px;">
+            <div class="form-group">
+                <select name="exam" class="form-control" onchange="this.form.submit()">
+                    <option value="">-- Select Exam --</option>
+                    {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam.id == exam.id %}selected{% endif %}>
+                            {{ exam.name }} ({{ exam.get_exam_type_display }}) - {{ exam.date_started|date:"M Y" }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% if selected_exam %}
+    <!-- Overall Progress -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <h3>📈 Overall Submission Progress - {{ selected_exam.name }}</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <div style="font-size: 48px; font-weight: bold; color: #6b21a8;">
+                {{ overall_percentage }}%
+            </div>
+            <div style="background: #e5e7eb; border-radius: 10px; height: 20px; margin: 15px 0; overflow: hidden;">
+                <div style="background: #10b981; width: {{ overall_percentage }}%; height: 100%; border-radius: 10px;"></div>
+            </div>
+            <p>{{ total_submitted }} out of {{ total_subjects }} subjects have been submitted</p>
+        </div>
+    </div>
+
+    <!-- Publish All Button -->
+    {% if pending_count > 0 %}
+    <div class="card" style="margin-bottom: 20px; background: #fef3c7; border: 1px solid #f59e0b;">
+        <div class="card-header">
+            <h3>📢 Publish Results</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <p><strong>{{ pending_count }}</strong> subjects are pending approval.</p>
+            <form method="POST" action="{% url 'publish_all_results' %}" onsubmit="return confirm('Are you sure you want to publish ALL pending results for {{ selected_exam.name }}? This cannot be undone.')">
+                {% csrf_token %}
+                <input type="hidden" name="exam_id" value="{{ selected_exam.id }}">
+                <button type="submit" class="btn-success" style="background: #10b981; color: white; padding: 12px 30px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                    🚀 Publish All Results for {{ selected_exam.name }}
+                </button>
+            </form>
+            <p style="margin-top: 10px; font-size: 12px;">This will publish all pending results for this exam across all classes.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Submission by Class -->
+    <div class="card">
+        <div class="card-header">
+            <h3>📋 Submission by Class</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr style="background: #f3e8ff;">
+                        <th style="padding: 12px;">Class</th>
+                        <th style="padding: 12px;">Subjects</th>
+                        <th style="padding: 12px;">Submitted</th>
+                        <th style="padding: 12px;">Pending</th>
+                        <th style="padding: 12px;">Missing</th>
+                        <th style="padding: 12px;">Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in classes_data %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px;"><strong>{{ data.classroom.name }} {% if data.classroom.stream %}({{ data.classroom.stream }}){% endif %}</strong></td>
+                        <td style="padding: 12px;">{{ data.total_subjects }}</td>
+                        <td style="padding: 12px; color: #10b981;">{{ data.submitted_count }}</td>
+                        <td style="padding: 12px; color: #f59e0b;">{{ data.pending_count }}</td>
+                        <td style="padding: 12px; color: #ef4444;">{{ data.missing_count }}</td>
+                        <td style="padding: 12px; width: 200px;">
+                            <div style="background: #e5e7eb; border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div style="background: {% if data.percentage == 100 %}#10b981{% else %}#c084fc{% endif %}; width: {{ data.percentage }}%; height: 100%; border-radius: 10px;"></div>
+                            </div>
+                            <small>{{ data.percentage }}%</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="card">
+        <div class="empty-state">
+            <i class="fas fa-calendar-alt"></i>
+            <p>Please select an exam to view submission progress</p>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %}

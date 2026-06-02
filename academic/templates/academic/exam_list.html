@@ -1,47 +1,51 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Exams Directory{% endblock %}
+{% block title %}Exams{% endblock %}
 
 {% block content %}
+
 <div class="dashboard-header">
-    <h1>Examinations</h1>
-    <p>A complete list of all registered exams.</p>
+    <h1>📝 Examinations</h1>
+    <p>A complete list of all registered exams</p>
 </div>
 
-<div class="data-table-container">
-    <div class="data-table-header">
-        <h2>Exam List</h2>
-        
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-calendar-alt"></i> All Exams</h3>
+        {% if request.user.role == 'SUPER_ADMIN' %}
+        <a href="{% url 'add_exam' %}" class="btn-primary"><i class="fas fa-plus"></i> Add Exam</a>
+        {% endif %}
     </div>
-    
     <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table-modern">
             <thead>
                 <tr>
                     <th>Exam Name</th>
-                    <th>Date</th>
                     <th>Exam Type</th>
+                    <th>Date Started</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for exam in exams %}
                 <tr>
-                    <td>{{ exam.name }}</td>
+                    <td><strong>{{ exam.name }}</strong></td>
+                    <td><span class="exam-type-badge">{{ exam.get_exam_type_display }}</span></td>
                     <td>{{ exam.date_started|date:"d M Y, H:i" }}</td>
-                    <td>{{ exam.get_exam_type_display }}</td>
+                    <td><span class="exam-status">📅 Upcoming</span></td>
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="3" class="table-empty">
-                        <i class="fas fa-pen-to-square"></i><br>
-                        No exams found. 
-                        <a href="{% url 'add_exam' %}" style="color: var(--soft-green);">Add one now?</a>
-                    </td>
-                </tr>
+                <tr><td colspan="4" class="empty-state">No exams found.{% if request.user.role == 'SUPER_ADMIN' %} <a href="{% url 'add_exam' %}">Add your first exam</a>{% endif %}</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+.exam-type-badge { background: #dbeafe; color: #2563eb; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+.exam-status { font-size: 0.7rem; color: #64748b; }
+</style>
+
 {% endblock %}

@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Processing Payment{% endblock %}
+
+{% block content %}
+
+<div class="payment-modal-overlay" id="paymentModal">
+    <div class="payment-modal-content">
+        <div class="payment-loader">
+            <div class="loader-spinner"></div>
+            <div class="loader-text" id="loaderText">Waiting for payment...</div>
+            <div class="loader-message" id="loaderMessage">Please check your phone and enter M-Pesa PIN</div>
+            <div class="loader-timer" id="timerDisplay">Time remaining: <span id="seconds">60</span> seconds</div>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.payment-modal-content {
+    background: white;
+    border-radius: 24px;
+    padding: 50px 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.loader-spinner {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 25px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #10b981;
+    border-right: 4px solid #10b981;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loader-text {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #1f2937;
+}
+
+.loader-message {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.loader-timer {
+    font-size: 13px;
+    color: #9ca3af;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#seconds {
+    font-weight: bold;
+    color: #dc143c;
+}
+
+/* Success state */
+.payment-modal-content.success .loader-spinner {
+    border: 4px solid #10b981;
+    animation: none;
+}
+.payment-modal-content.success .loader-spinner::before {
+    content: "✓";
+    font-size: 35px;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+/* Error state */
+.payment-modal-content.error .loader-spinner {
+    border: 4px solid #ef4444;
+    animation: none;
+}
+.payment-modal-content.error .loader-spinner::before {
+    content: "✗";
+    font-size: 35px;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.payment-modal-content.success .loader-timer,
+.payment-modal-content.error .loader-timer {
+    display: none;
+}
+</style>
+
+<script>
+let paymentId = "{{ payment_record.id }}";
+let statusCheckInterval;
+let timeoutTimer;
+let timeLeft = 60;
+let timerInterval;
+
+function updateUI(status, message, subMessage) {
+    const modal = document.querySelector('.payment-modal-content');
+    const loaderText = document.getElementById('loaderText');
+    const loaderMessage = document.getElementById('loaderMessage');
+    const timerDisplay = document.getElementById('timerDisplay');
+    
+    loaderText.textContent = message;
+    loaderMessage.textContent = subMessage || '';
+    
+    if (status === 'success') {
+        modal.classList.add('success');
+        if (timerDisplay) timerDisplay.style.display = 'none';
+    } else if (status === 'error') {
+        modal.classList.add('error');
+        if (timerDisplay) timerDisplay.style.display = 'none';
+    }
+}
+
+function startTimer() {
+    timerInterval = setInterval(function() {
+        timeLeft--;
+        const secondsSpan = document.getElementById('seconds');
+        if (secondsSpan) {
+            secondsSpan.textContent = timeLeft;
+        }
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            clearInterval(statusCheckInterval);
+            clearTimeout(timeoutTimer);
+            updateUI('error', 'Payment Timeout', 'You did not complete the payment in time.');
+            
+            // Delete the pending payment
+            fetch(`/finance/delete-pending-payment/${paymentId}/`, { method: 'POST' })
+                .catch(error => console.log('Error deleting payment:', error));
+            
+            setTimeout(() => {
+                window.location.href = "{% url 'payement_detail' %}";
+            }, 2500);
+        }
+    }, 1000);
+}
+
+function checkPaymentStatus() {
+    fetch(`/finance/check-payment-status/${paymentId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed') {
+                // Payment successful
+                clearInterval(statusCheckInterval);
+                clearInterval(timerInterval);
+                clearTimeout(timeoutTimer);
+                updateUI('success', 'Payment Successful!', 'Your payment has been received. Redirecting...');
+                
+                setTimeout(() => {
+                    window.location.href = "{% url 'payement_detail' %}";
+                }, 2000);
+                
+            } else if (data.status === 'timeout') {
+                clearInterval(statusCheckInterval);
+                clearInterval(timerInterval);
+                updateUI('error', 'Payment Failed', 'No payment was received. Please try again.');
+                
+                setTimeout(() => {
+                    window.location.href = "{% url 'payement_detail' %}";
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.log('Error checking status:', error);
+        });
+}
+
+// Start timer and status checks
+startTimer();
+statusCheckInterval = setInterval(checkPaymentStatus, 2000);
+timeoutTimer = setTimeout(() => {}, 61000);
+</script>
+
+{% endblock %}

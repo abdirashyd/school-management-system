@@ -7,13 +7,16 @@ from .models import Notification
 from academic.models import Classroom, Teacher
 from students.models import Students
 from accounts.models import User
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 @login_required
 def send_notification(request):
     user = request.user
     
-    if user.role not in ['SUPER_ADMIN', 'TEACHER']:
+    # Allow SUPER_ADMIN, ADMIN, and TEACHER
+    if user.role not in ['SUPER_ADMIN', 'ADMIN', 'TEACHER']:
         messages.error(request, "You don't have permission to send notifications.")
         return redirect('dashboard')
     
@@ -37,68 +40,94 @@ def send_notification(request):
         
         try:
             with transaction.atomic():
-                notification = Notification.objects.create(
-                    sender=user,
-                    title=title,
-                    message=message_text,
-                    notification_type=notification_type
-                )
+                recipients_list = []
                 
-                if notification_type == 'CLASS' and target_class_id:
-                    target_class = Classroom.objects.get(id=target_class_id)
-                    notification.target_class = target_class
-                    notification.save()
+                # ========== SUPER ADMIN - Can send to ANYONE ==========
+                if user.role == 'SUPER_ADMIN':
+                    if notification_type == 'CLASS' and target_class_id:
+                        target_class = Classroom.objects.get(id=target_class_id)
+                        students = Students.objects.filter(current_class=target_class)
+                        recipients_list = [student.user for student in students]
+                        
+                    elif notification_type == 'ALL':
+                        recipients_list = User.objects.filter(is_active=True)
+                        
+                    elif notification_type == 'TEACHER':
+                        recipients_list = User.objects.filter(role='TEACHER')
+                        
+                    elif notification_type == 'PARENT':
+                        recipients_list = User.objects.filter(role='PARENT')
+                
+                # ========== SCHOOL ADMIN - Only THEIR SCHOOL ==========
+                elif user.role == 'ADMIN':
+                    school = user.school
                     
-                    students = Students.objects.filter(current_class=target_class)
-                    for student in students:
-                        Notification.objects.create(
-                            sender=user,
-                            recipient=student.user,
-                            title=title,
-                            message=message_text,
-                            notification_type='STUDENT'
-                        )
+                    if notification_type == 'CLASS' and target_class_id:
+                        target_class = Classroom.objects.get(id=target_class_id, school=school)
+                        students = Students.objects.filter(current_class=target_class, school=school)
+                        recipients_list = [student.user for student in students]
+                        
+                    elif notification_type == 'ALL':
+                        recipients_list = User.objects.filter(is_active=True, school=school)
+                        
+                    elif notification_type == 'TEACHER':
+                        recipients_list = User.objects.filter(role='TEACHER', school=school)
+                        
+                    elif notification_type == 'PARENT':
+                        recipients_list = User.objects.filter(role='PARENT', school=school)
+                        
+                    elif notification_type == 'STUDENT':
+                        recipients_list = User.objects.filter(role='STUDENT', school=school)
                 
-                elif notification_type == 'ALL' and user.role == 'SUPER_ADMIN':
-                    all_users = User.objects.filter(is_active=True)
-                    for u in all_users:
-                        Notification.objects.create(
-                            sender=user,
-                            recipient=u,
-                            title=title,
-                            message=message_text,
-                            notification_type='ALL'
+                # ========== TEACHER - Only their CLASSES ==========
+                elif user.role == 'TEACHER':
+                    if notification_type == 'CLASS' and target_class_id:
+                        # Teacher can only send to classes they teach
+                        teacher_record = Teacher.objects.get(user=user)
+                        target_class = Classroom.objects.get(
+                            id=target_class_id,
+                            class_teacher=user
                         )
+                        students = Students.objects.filter(current_class=target_class)
+                        recipients_list = [student.user for student in students]
+                    else:
+                        messages.error(request, "Teachers can only send notifications to their own classes.")
+                        return redirect('send_notification')
                 
-                elif notification_type == 'TEACHER' and user.role == 'SUPER_ADMIN':
-                    teachers = User.objects.filter(role='TEACHER')
-                    for t in teachers:
-                        Notification.objects.create(
-                            sender=user,
-                            recipient=t,
-                            title=title,
-                            message=message_text,
-                            notification_type='TEACHER'
-                        )
+                # Create notifications and send emails
+                for recipient in recipients_list:
+                    # Create in-app notification
+                    Notification.objects.create(
+                        sender=user,
+                        recipient=recipient,
+                        title=title,
+                        message=message_text,
+                        notification_type=notification_type
+                    )
+                    
+                    # Send email
+                    if recipient.email:
+                        try:
+                            send_mail(
+                                subject=f"📢 EduNexus: {title}",
+                                message=f"Dear {recipient.get_full_name() or recipient.username},\n\n{message_text}\n\n---\nLogin to view: {request.build_absolute_uri('/notifications/')}",
+                                from_email=settings.DEFAULT_FROM_EMAIL,
+                                recipient_list=[recipient.email],
+                                fail_silently=True,
+                            )
+                        except Exception as e:
+                            print(f"Email failed for {recipient.email}: {e}")
                 
-                elif notification_type == 'PARENT' and user.role == 'SUPER_ADMIN':
-                    parents = User.objects.filter(role='PARENT')
-                    for p in parents:
-                        Notification.objects.create(
-                            sender=user,
-                            recipient=p,
-                            title=title,
-                            message=message_text,
-                            notification_type='PARENT'
-                        )
-                
-                messages.success(request, "Notification sent successfully!")
+                messages.success(request, f"✅ Notification sent to {len(recipients_list)} recipient(s)!")
                 return redirect('send_notification')
                 
         except Exception as e:
-            messages.error(request, f"Error sending notification: {e}")
+            messages.error(request, f"❌ Error sending notification: {e}")
     
-    context = {'my_classes': my_classes, 'user_role': user.role}
+    context = {
+        'my_classes': my_classes,
+        'user_role': user.role,
+    }
     return render(request, 'notification/send.html', context)
 
 
@@ -108,12 +137,15 @@ def user_notifications(request):
     
     if request.GET.get('mark_all_read'):
         notifications.filter(is_read=False).update(is_read=True)
-        messages.success(request, "All notifications marked as read.")
+        messages.success(request, "✅ All notifications marked as read.")
         return redirect('user_notifications')
+    
+    # Mark all as read when viewing the page
+    notifications.filter(is_read=False).update(is_read=True)
     
     context = {
         'notifications': notifications,
-        'unread_count': notifications.filter(is_read=False).count(),
+        'unread_count': 0,
     }
     return render(request, 'notification/notification_list.html', context)
 
@@ -123,13 +155,14 @@ def mark_as_read(request, pk):
     notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
     notification.is_read = True
     notification.save()
+    messages.success(request, "✅ Notification marked as read.")
     return redirect('user_notifications')
 
 
 @login_required
 def mark_all_as_read(request):
     Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
-    messages.success(request, "All notifications marked as read.")
+    messages.success(request, "✅ All notifications marked as read.")
     return redirect('user_notifications')
 
 
@@ -137,7 +170,7 @@ def mark_all_as_read(request):
 def delete_notification(request, pk):
     notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
     notification.delete()
-    messages.success(request, "Notification deleted.")
+    messages.success(request, "🗑️ Notification deleted.")
     return redirect('user_notifications')
 
 
@@ -145,3 +178,23 @@ def delete_notification(request, pk):
 def unread_count_api(request):
     count = Notification.objects.filter(recipient=request.user, is_read=False).count()
     return JsonResponse({'unread_count': count})
+
+
+@login_required
+def latest_notifications_api(request):
+    """Get latest unread notifications for popup display"""
+    notifications = Notification.objects.filter(
+        recipient=request.user, 
+        is_read=False
+    ).order_by('-created_at')[:5]
+    
+    data = []
+    for notif in notifications:
+        data.append({
+            'id': notif.id,
+            'title': notif.title,
+            'message': notif.message,
+            'created_at': notif.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    return JsonResponse(data, safe=False)

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Teacher Assignments{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>👨‍🏫 Teacher Assignments</h1>
+    <p>Assign which teacher teaches which subject in each class</p>
+</div>
+
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-chalkboard-user"></i> Subject & Class Teacher Mapping</h3>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div class="table-responsive">
+            <table class="allocation-table">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        {% for subject in subjects %}
+                            <th>{{ subject.name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for classroom in classrooms %}
+                    <tr>
+                        <td class="class-cell"><strong>{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</strong></td>
+                        {% for subject in subjects %}
+                            {% with key=classroom.id|stringformat:"i"|add:"_"|add:subject.id|stringformat:"i" %}
+                            <td>
+                                <select name="teacher_{{ classroom.id }}_{{ subject.id }}" class="teacher-select">
+                                    <option value="">-- Not Assigned --</option>
+                                    {% for teacher in teachers %}
+                                        <option value="{{ teacher.id }}">{{ teacher.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="{{ subjects|length|add:1 }}" class="empty-state">No classes found for your school.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save All Assignments</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.allocation-table { width: 100%; border-collapse: collapse; }
+.allocation-table th { padding: 0.8rem; background: #f8fafc; font-size: 0.75rem; font-weight: 600; color: #64748b; text-align: center; border: 1px solid #e2e8f0; }
+.allocation-table td { padding: 0.8rem; border: 1px solid #e2e8f0; text-align: center; }
+.class-cell { background: #f1f5f9; font-weight: 600; text-align: left !important; }
+.teacher-select { width: 100%; min-width: 120px; padding: 0.4rem 0.6rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.75rem; }
+@media (max-width: 768px) { .teacher-select { min-width: 100px; font-size: 0.7rem; } }
+</style>
+
+{% endblock %}

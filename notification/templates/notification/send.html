@@ -20,19 +20,26 @@
             <label>Title <span class="required">*</span></label>
             <input type="text" name="title" placeholder="e.g., Exam Schedule Update" class="form-control" required>
         </div>
-        
-        <div class="form-group">
-            <label>Send To <span class="required">*</span></label>
-            <select name="notification_type" id="notificationType" class="form-control" required onchange="toggleClassSelect()">
-                <option value="">-- Select Recipients --</option>
-                {% if user_role == 'SUPER_ADMIN' %}
-                <option value="ALL">📢 Everyone (All Users)</option>
-                <option value="TEACHER">👨‍🏫 All Teachers</option>
-                <option value="PARENT">👪 All Parents</option>
-                {% endif %}
-                <option value="CLASS">🏫 Specific Class</option>
-            </select>
-        </div>
+        <select name="notification_type" id="notificationType" class="form-control" required onchange="toggleClassSelect()">
+    <option value="">-- Select Recipients --</option>
+    
+    {% if user_role == 'SUPER_ADMIN' %}
+        <option value="ALL">📢 Everyone (All Users - All Schools)</option>
+        <option value="TEACHER">👨‍🏫 All Teachers (All Schools)</option>
+        <option value="PARENT">👪 All Parents (All Schools)</option>
+        <option value="CLASS">🏫 Specific Class</option>
+    
+    {% elif user_role == 'ADMIN' %}
+        <option value="ALL">📢 Everyone (Your School Only)</option>
+        <option value="TEACHER">👨‍🏫 All Teachers (Your School)</option>
+        <option value="PARENT">👪 All Parents (Your School)</option>
+        <option value="STUDENT">👩‍🎓 All Students (Your School)</option>
+        <option value="CLASS">🏫 Specific Class</option>
+    
+    {% elif user_role == 'TEACHER' %}
+        <option value="CLASS">🏫 My Class</option>
+    {% endif %}
+</select>
         
         <div class="form-group" id="classSelect" style="display: none;">
             <label>Select Class</label>
@@ -50,11 +57,9 @@
             <textarea name="message" rows="6" placeholder="Type your message here..." class="form-control" required></textarea>
         </div>
         
-        <div class="form-actions">
+        <div class="form-actions" style="display: flex; gap: 10px; margin-top: 20px;">
             <button type="submit" class="btn-primary">
-                {% if request.user.role != 'STUDENT' and request.user.role != 'PARENT' %}
                 <i class="fas fa-paper-plane"></i> Send Notification
-                {% endif %}
             </button>
             <a href="{% url 'user_notifications' %}" class="btn-view">
                 <i class="fas fa-list"></i> View Notifications
@@ -70,5 +75,37 @@
         classSelect.style.display = type === 'CLASS' ? 'block' : 'none';
     }
 </script>
+
+<style>
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+.btn-primary {
+    background: #c084fc;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-view {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+}
+</style>
 
 {% endblock %}

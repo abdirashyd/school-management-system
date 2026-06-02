@@ -5,33 +5,31 @@
 
 {% block content %}
 
-<div class="list-header">
-    <div class="list-title">
-        <h1>Attendance Report</h1>
-        <p>Mark daily attendance and view/download reports</p>
-    </div>
+<div class="dashboard-header">
+    <h1>Attendance Report</h1>
 </div>
 
 <!-- Date Filter for Report -->
-<div class="search-container">
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-calendar-alt"></i> Filter Attendance</h3>
+    </div>
     <form method="GET" class="search-form" action="{% url 'attendance_report' %}">
-        <div class="form-row">
+        <div class="filter-row">
             <div class="form-group">
                 <label>Start Date</label>
-                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="filter-select">
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control-modern">
             </div>
             <div class="form-group">
                 <label>End Date</label>
-                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="filter-select">
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control-modern">
             </div>
             <div class="form-group">
-                <label>&nbsp;</label>
-                <button type="submit" class="search-btn">
+                <button type="submit" class="btn-primary">
                     <i class="fas fa-filter"></i> Filter
                 </button>
             </div>
             <div class="form-group">
-                <label>&nbsp;</label>
                 <button type="submit" name="export" value="excel" class="btn-success">
                     <i class="fas fa-file-excel"></i> Download Excel
                 </button>
@@ -42,41 +40,45 @@
 </div>
 
 <!-- Mark Attendance Section -->
-<div class="attendance-card">
-    <h3><i class="fas fa-calendar-check"></i> Mark Attendance - {{ today|date:"l, F d, Y" }}</h3>
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-calendar-check"></i> Mark Attendance - {{ today|date:"l, F d, Y" }}</h3>
+    </div>
     
     <form method="POST">
         {% csrf_token %}
         
-        <div class="table-wrapper">
-            <table class="data-table">
+        <div class="table-responsive">
+            <table class="data-table-modern">
                 <thead>
                     <tr>
                         <th>Student Name</th>
                         <th>Adm No</th>
                         <th>Class</th>
-                        <th>Status</th>
+                        <th>Present?</th>
                         <th>Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for student in students %}
-                    <tr id="row-{{ student.id }}">
-                        <td>{{ student.first_name }} {{ student.last_name }}</td>
+                    <tr>
+                        <td><strong>{{ student.first_name }} {{ student.last_name }}</strong></td>
                         <td>{{ student.registration_number }}</td>
                         <td>{{ student.current_class|default:"Not Assigned" }}</td>
-                        <td>
-                            <select name="status_{{ student.id }}" class="status-select" data-student="{{ student.id }}">
-                                <option value="">-- Select --</option>
-                                {% for code, name in status_choices %}
-                                    <option value="{{ code }}">
-                                        {{ name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                        <td class="checkbox-cell">
+                            <label class="checkbox-label">
+                                <input type="checkbox" 
+                                       name="present_{{ student.id }}" 
+                                       class="attendance-checkbox"
+                                       {% if student.id in present_students %}checked{% endif %}>
+                                <span>Present</span>
+                            </label>
                         </td>
                         <td>
-                            <input type="text" name="remarks_{{ student.id }}" class="remarks-input" placeholder="Optional">
+                            <input type="text" 
+                                   name="remarks_{{ student.id }}" 
+                                   class="remarks-input" 
+                                   placeholder="Optional remark">
                         </td>
                     </tr>
                     {% empty %}
@@ -92,7 +94,7 @@
         </div>
         
         {% if students %}
-        <div class="form-actions">
+        <div class="form-actions" style="margin-top: 1.5rem; justify-content: center;">
             <button type="submit" class="btn-primary">
                 <i class="fas fa-save"></i> Save Attendance
             </button>
@@ -102,32 +104,30 @@
 </div>
 
 <!-- Attendance Report Summary -->
-<div class="attendance-summary">
-    <h3><i class="fas fa-chart-bar"></i> Today's Summary</h3>
+<div class="modern-card">
+    <div class="card-header-modern">
+        <h3><i class="fas fa-chart-bar"></i> Today's Summary</h3>
+    </div>
     <div class="summary-stats" id="summaryStats">
-        <div class="summary-item">Select status to see summary</div>
+        <div class="summary-item">Select attendance to see summary</div>
     </div>
 </div>
 
 <script>
-    // Calculate summary based on selected statuses
     function calculateSummary() {
-        const rows = document.querySelectorAll('.data-table tbody tr');
+        const rows = document.querySelectorAll('.data-table-modern tbody tr');
         let total = 0;
         let present = 0;
         let absent = 0;
-        let late = 0;
-        let excused = 0;
         
         rows.forEach(row => {
-            const select = row.querySelector('.status-select');
-            if (select && select.value) {
+            const checkbox = row.querySelector('.attendance-checkbox');
+            if (checkbox) {
                 total++;
-                switch(select.value) {
-                    case 'Present': present++; break;
-                    case 'Absent': absent++; break;
-                    case 'Late': late++; break;
-                    case 'Excused': excused++; break;
+                if (checkbox.checked) {
+                    present++;
+                } else {
+                    absent++;
                 }
             }
         });
@@ -135,7 +135,7 @@
         const summaryDiv = document.getElementById('summaryStats');
         if (summaryDiv) {
             if (total === 0) {
-                summaryDiv.innerHTML = '<div class="summary-item">No status selected yet</div>';
+                summaryDiv.innerHTML = '<div class="summary-item">No students found</div>';
                 return;
             }
             
@@ -152,24 +152,14 @@
                     <div class="summary-label">Absent</div>
                     <div class="summary-value text-danger">${absent} (${Math.round(absent/total*100)}%)</div>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-label">Late</div>
-                    <div class="summary-value text-warning">${late} (${Math.round(late/total*100)}%)</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-label">Excused</div>
-                    <div class="summary-value text-info">${excused} (${Math.round(excused/total*100)}%)</div>
-                </div>
             `;
         }
     }
     
-    // Run on page load and when status changes
     document.addEventListener('DOMContentLoaded', calculateSummary);
     
-    // Add event listeners to all status selects
-    document.querySelectorAll('.status-select').forEach(select => {
-        select.addEventListener('change', calculateSummary);
+    document.querySelectorAll('.attendance-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', calculateSummary);
     });
 </script>
 

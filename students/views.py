@@ -16,8 +16,12 @@ def student_list_view(request):
     search_query = request.GET.get('search', '')
     leadership_filter = request.GET.get('has_leadership', '')
     
-    if user.role in ['SUPER_ADMIN', 'ADMIN']:
+    # ✅ UPDATED: SUPER_ADMIN sees all students
+    # ✅ UPDATED: ADMIN sees only students in their school
+    if user.role == 'SUPER_ADMIN':
         students = Students.objects.all().select_related('current_class', 'parents')
+    elif user.role == 'ADMIN':
+        students = Students.objects.filter(school=user.school).select_related('current_class', 'parents')
     elif user.role == 'TEACHER':
         try:
             teacher_record = Teacher.objects.get(user=user)
@@ -27,7 +31,9 @@ def student_list_view(request):
             ).values_list('id', flat=True).distinct()
             all_class_ids = list(class_teacher_classes.values_list('id', flat=True)) + list(subject_teacher_classes)
             if all_class_ids:
-                students = Students.objects.filter(current_class_id__in=all_class_ids).select_related('current_class', 'parents')
+                students = Students.objects.filter(
+                    current_class_id__in=all_class_ids
+                ).select_related('current_class', 'parents')
             else:
                 students = Students.objects.none()
         except Teacher.DoesNotExist:
@@ -67,8 +73,14 @@ def student_detail(request, pk):
     student = get_object_or_404(Students, pk=pk)
     user = request.user
     
-    if user.role in ['SUPER_ADMIN', 'ADMIN']:
-        pass
+    # ✅ UPDATED: Permission checks with school filtering
+    if user.role == 'SUPER_ADMIN':
+        pass  # Super Admin can view any student
+    elif user.role == 'ADMIN':
+        # School Admin can only view students from their school
+        if student.school != user.school:
+            messages.error(request, "You can only view students from your school.")
+            return redirect('student_list')
     elif user.role == 'TEACHER':
         try:
             teacher_record = Teacher.objects.get(user=user)
@@ -103,8 +115,11 @@ def attendance_report(request):
         messages.error(request, "You don't have permission to mark attendance.")
         return redirect('dashboard')
     
-    if user.role in ['SUPER_ADMIN', 'ADMIN']:
+    # ✅ UPDATED: Get students based on role with school filtering
+    if user.role == 'SUPER_ADMIN':
         students = Students.objects.all().select_related('current_class')
+    elif user.role == 'ADMIN':
+        students = Students.objects.filter(school=user.school).select_related('current_class')
     elif user.role == 'TEACHER':
         try:
             teacher_record = Teacher.objects.get(user=user)
@@ -114,7 +129,9 @@ def attendance_report(request):
             ).values_list('id', flat=True).distinct()
             all_class_ids = list(class_teacher_classes.values_list('id', flat=True)) + list(subject_teacher_classes)
             if all_class_ids:
-                students = Students.objects.filter(current_class_id__in=all_class_ids).select_related('current_class')
+                students = Students.objects.filter(
+                    current_class_id__in=all_class_ids
+                ).select_related('current_class')
             else:
                 students = Students.objects.none()
         except Teacher.DoesNotExist:
@@ -123,32 +140,81 @@ def attendance_report(request):
         students = Students.objects.none()
     
     today = timezone.now().date()
+    default_start = today - timedelta(days=30)
     
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    else:
+        start_date = default_start
+    
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+        end_date = today
+    
+    # Check if download requested
+    if request.GET.get('export') == 'excel':
+        classroom_name = request.GET.get('class_name', 'All Classes')
+        attendance_records = {}
+        for student in students:
+            records = Attendance.objects.filter(
+                student=student,
+                date__gte=start_date,
+                date__lte=end_date
+            ).order_by('date')
+            attendance_records[student.id] = records
+        
+        return export_attendance_to_excel(
+            students, 
+            attendance_records, 
+            start_date.strftime('%Y-%m-%d'), 
+            end_date.strftime('%Y-%m-%d'),
+            classroom_name
+        )
+    
+    # ========== HANDLE POST REQUEST (CHECKBOX LOGIC) ==========
     if request.method == 'POST':
         saved_count = 0
         for student in students:
-            status = request.POST.get(f'status_{student.id}')
+            is_present = request.POST.get(f'present_{student.id}') == 'on'
             remarks = request.POST.get(f'remarks_{student.id}', '')
-            if status:
-                Attendance.objects.update_or_create(
-                    student=student,
-                    date=today,
-                    defaults={'status': status, 'remarks': remarks, 'marked_by': user}
-                )
-                saved_count += 1
+            
+            status = 'Present' if is_present else 'Absent'
+            
+            # ✅ UPDATED: Also save school_id when creating attendance
+            Attendance.objects.update_or_create(
+                student=student,
+                date=today,
+                defaults={
+                    'status': status, 
+                    'remarks': remarks, 
+                    'marked_by': user,
+                    'school_id': student.school_id,  # ✅ Set school from student
+                }
+            )
+            saved_count += 1
+        
         if saved_count > 0:
             messages.success(request, f"Attendance for {saved_count} student(s) on {today} saved successfully!")
         else:
             messages.warning(request, "No attendance records were saved.")
         return redirect('attendance_report')
     
-    attendance_records = {att.student_id: att for att in Attendance.objects.filter(date=today)}
+    # ========== GET REQUEST - LOAD EXISTING ATTENDANCE ==========
+    today_records = {att.student_id: att for att in Attendance.objects.filter(date=today)}
+    
+    present_students = [student_id for student_id, att in today_records.items() if att.status == 'Present']
     
     context = {
         'students': students,
-        'attendance_records': attendance_records,
+        'today_records': today_records,
+        'present_students': present_students,
         'today': today,
-        'status_choices': Attendance.STATUS_CHOICES,
+        'start_date': start_date,
+        'end_date': end_date,
     }
     return render(request, 'students/attendance_report.html', context)
 
@@ -171,105 +237,115 @@ def delete_student(request, pk):
     return redirect('student_list')
 
 
-# students/views.py - Add these imports at the top
-
-  # Add this
-
-
 @login_required
-def attendance_report(request):
-    user = request.user
-    
-    if user.role not in ['SUPER_ADMIN', 'ADMIN', 'TEACHER']:
-        messages.error(request, "You don't have permission to mark attendance.")
+def promote_students(request):
+    """Promote all students to next grade - Only Head Teacher"""
+    # Only HEAD TEACHER can promote students
+    if request.user.role != 'HEAD_TEACHER':
+        messages.error(request, "Only Head Teacher can promote students.")
         return redirect('dashboard')
     
-    # Get students based on role
-    if user.role in ['SUPER_ADMIN', 'ADMIN']:
-        students = Students.objects.all().select_related('current_class')
-    elif user.role == 'TEACHER':
-        try:
-            teacher_record = Teacher.objects.get(user=user)
-            class_teacher_classes = Classroom.objects.filter(class_teacher=user)
-            subject_teacher_classes = Classroom.objects.filter(
-                subjects__teacher=user
-            ).values_list('id', flat=True).distinct()
-            all_class_ids = list(class_teacher_classes.values_list('id', flat=True)) + list(subject_teacher_classes)
-            if all_class_ids:
-                students = Students.objects.filter(current_class_id__in=all_class_ids).select_related('current_class')
-            else:
-                students = Students.objects.none()
-        except Teacher.DoesNotExist:
-            students = Students.objects.none()
-    else:
-        students = Students.objects.none()
+    # Also ensure the Head Teacher has a school assigned
+    if not request.user.school:
+        messages.error(request, "Your account is not associated with any school.")
+        return redirect('dashboard')
     
-    # Get date range from request
-    today = timezone.now().date()
-    default_start = today - timedelta(days=30)
+    from academic.models import GradeLevel, PromotionHistory
+    from django.utils import timezone
     
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    current_year = timezone.now().year
+    next_year = current_year + 1
+    academic_year = f"{current_year}-{next_year}"
     
-    if start_date:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-    else:
-        start_date = default_start
-    
-    if end_date:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    else:
-        end_date = today
-    
-    # Get attendance records within date range
-    attendance_records = {}
-    for student in students:
-        records = Attendance.objects.filter(
-            student=student,
-            date__gte=start_date,
-            date__lte=end_date
-        ).order_by('date')
-        attendance_records[student.id] = records
-    
-    # Check if download requested
-    if request.GET.get('export') == 'excel':
-        classroom_name = request.GET.get('class_name', 'All Classes')
-        return export_attendance_to_excel(
-            students, 
-            attendance_records, 
-            start_date.strftime('%Y-%m-%d'), 
-            end_date.strftime('%Y-%m-%d'),
-            classroom_name
-        )
-    
-    # For POST request (mark attendance)
     if request.method == 'POST':
-        saved_count = 0
+        # Get all active students in THIS SCHOOL only (not graduated)
+        students = Students.objects.filter(
+            school=request.user.school,
+            is_graduated=False
+        )
+        
+        promoted_count = 0
+        graduated_count = 0
+        skipped_count = 0
+        
         for student in students:
-            status = request.POST.get(f'status_{student.id}')
-            remarks = request.POST.get(f'remarks_{student.id}', '')
-            if status:
-                Attendance.objects.update_or_create(
+            current_grade = student.current_grade
+            
+            if not current_grade:
+                skipped_count += 1
+                continue
+            
+            next_grade = current_grade.next_grade
+            
+            if next_grade:
+                PromotionHistory.objects.create(
                     student=student,
-                    date=today,
-                    defaults={'status': status, 'remarks': remarks, 'marked_by': user}
+                    from_grade=current_grade,
+                    to_grade=next_grade,
+                    promoted_by=request.user,
+                    academic_year=academic_year,
+                    school=request.user.school,  # ✅ Set school
                 )
-                saved_count += 1
-        if saved_count > 0:
-            messages.success(request, f"Attendance for {saved_count} student(s) on {today} saved successfully!")
-        else:
-            messages.warning(request, "No attendance records were saved.")
-        return redirect('attendance_report')
+                student.current_grade = next_grade
+                student.save()
+                promoted_count += 1
+                
+            else:
+                # No next grade - this is graduation (Grade 12)
+                PromotionHistory.objects.create(
+                    student=student,
+                    from_grade=current_grade,
+                    to_grade=None,
+                    promoted_by=request.user,
+                    academic_year=academic_year,
+                    school=request.user.school,  # ✅ Set school
+                )
+                student.is_graduated = True
+                student.graduation_year = current_year
+                student.current_grade = None
+                student.save()
+                graduated_count += 1
+                
+                if student.parents:
+                    from notification.models import Notification
+                    Notification.objects.create(
+                        recipient=student.parents,
+                        title="🎓 Congratulations Graduate!",
+                        message=f"Your child {student.first_name} {student.last_name} has graduated from Grade {current_grade.grade_number}. Congratulations!",
+                        notification_type='STUDENT'
+                    )
+        
+        messages.success(
+            request, 
+            f"Promotion complete! Promoted: {promoted_count}, Graduated: {graduated_count}, Skipped (no grade): {skipped_count}"
+        )
+        return redirect('dashboard')
     
-    # Get today's attendance records
-    today_records = {att.student_id: att for att in Attendance.objects.filter(date=today)}
+    # GET request - show confirmation page (only students from this school)
+    students = Students.objects.filter(
+        school=request.user.school,
+        is_graduated=False
+    ).select_related('current_grade')
+    
+    students_by_grade = {}
+    
+    for student in students:
+        if student.current_grade:
+            grade_num = student.current_grade.grade_number
+            if grade_num not in students_by_grade:
+                students_by_grade[grade_num] = []
+            students_by_grade[grade_num].append(student)
+        else:
+            if 'no_grade' not in students_by_grade:
+                students_by_grade['no_grade'] = []
+            students_by_grade['no_grade'].append(student)
+    
+    all_grades = GradeLevel.objects.all().order_by('grade_number')
     
     context = {
-        'students': students,
-        'today_records': today_records,
-        'today': today,
-        'status_choices': Attendance.STATUS_CHOICES,
-        'start_date': start_date,
-        'end_date': end_date,
+        'students_by_grade': students_by_grade,
+        'all_grades': all_grades,
+        'total_students': students.count(),
+        'academic_year': academic_year,
     }
-    return render(request, 'students/attendance_report.html', context)
+    return render(request, 'students/promote_students.html', context)

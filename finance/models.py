@@ -3,6 +3,9 @@ from django.conf import settings
 
 
 class Payement(models.Model):
+    # ✅ ADD THIS - School field (which school this payment belongs to)
+    school = models.ForeignKey('accounts.School', on_delete=models.CASCADE, related_name='payments', null=True, blank=True)
+    
     METHODS = [
         ('M-Pesa', 'M-Pesa'),
         ('Bank', 'Bank Transfer'),
