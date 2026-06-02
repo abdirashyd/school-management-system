@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete School{% endblock %}
+
+{% block content %}
+
+<div class="confirm-delete-container">
+    <div class="confirm-delete-card">
+        <div class="warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h2>Delete School?</h2>
+        <p>Are you sure you want to delete <strong>"{{ school.name }}"</strong>?</p>
+        
+        <div class="warning-box">
+            <i class="fas fa-info-circle"></i>
+            <span>This action <strong>cannot be undone</strong>. The following data will be permanently deleted:</span>
+        </div>
+        
+        <ul class="delete-warning-list">
+            <li><i class="fas fa-user-graduate"></i> All students in this school</li>
+            <li><i class="fas fa-chalkboard-user"></i> All teachers in this school</li>
+            <li><i class="fas fa-money-bill-wave"></i> All payment records</li>
+            <li><i class="fas fa-chart-line"></i> All academic results and attendance</li>
+            <li><i class="fas fa-calendar-alt"></i> All exam records</li>
+        </ul>
+        
+        <div class="delete-actions">
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn-confirm-delete">
+                    <i class="fas fa-trash"></i> Yes, Delete School
+                </button>
+                <a href="{% url 'super_admin_school_detail' school.id %}" class="btn-cancel">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.confirm-delete-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 1.5rem;
+}
+
+.confirm-delete-card {
+    background: white;
+    border-radius: 24px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.warning-icon {
+    width: 70px;
+    height: 70px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+}
+
+.warning-icon i {
+    font-size: 2rem;
+    color: #dc2626;
+}
+
+.confirm-delete-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1e293b;
+}
+
+.confirm-delete-card p {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+}
+
+.warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.warning-box i {
+    color: #f59e0b;
+    font-size: 1rem;
+}
+
+.warning-box span {
+    font-size: 0.8rem;
+    color: #92400e;
+}
+
+.delete-warning-list {
+    text-align: left;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.delete-warning-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.8rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.delete-warning-list li i {
+    width: 20px;
+    color: #dc2626;
+}
+
+.delete-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-confirm-delete {
+    background: #dc2626;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-confirm-delete:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+}
+
+.btn-cancel {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 0.7rem 1.5rem;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #cbd5e1;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .confirm-delete-card {
+        padding: 1.5rem;
+    }
+    
+    .delete-actions {
+        flex-direction: column;
+    }
+    
+    .btn-confirm-delete, .btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+{% endblock %}

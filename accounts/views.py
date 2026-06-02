@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import update_session_auth_hash
-
+from finance.models import Payement  # Add this line
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -921,16 +921,28 @@ def super_admin_delete_school(request, school_id):
         messages.error(request, "Only Super Admin can delete schools.")
         return redirect('dashboard')
     
+    from students.models import Students
+    from academic.models import Teacher
+    from finance.models import Payement
+    from accounts.models import User
+    
     school = get_object_or_404(School, id=school_id)
     
     if request.method == 'POST':
         school_name = school.name
+        
+        # Delete all users belonging to this school FIRST
+        User.objects.filter(school=school).delete()
+        
+        # Delete other related data
         Students.objects.filter(school=school).delete()
         Teacher.objects.filter(school=school).delete()
         Payement.objects.filter(school=school).delete()
-        User.objects.filter(school=school).update(school=None)
+        
+        # Delete the school
         school.delete()
-        messages.success(request, f"School '{school_name}' deleted.")
+        
+        messages.success(request, f"School '{school_name}' and all its users have been deleted successfully!")
         return redirect('super_admin_schools')
     
     return render(request, 'accounts/confirm_delete_school.html', {'school': school})
@@ -1438,9 +1450,11 @@ def delete_user(request, user_id):
         messages.error(request, "You don't have permission to delete users.")
         return redirect('user_list')
     
-    # Add check for Head Teacher if needed
+    # Get the user to delete
+    user_to_delete = get_object_or_404(User, id=user_id)
+    
+    # Check permissions for School Admin
     if request.user.role == 'ADMIN' and request.user.school:
-        user_to_delete = get_object_or_404(User, id=user_id)
         if user_to_delete.school != request.user.school:
             messages.error(request, "You can only delete users in your school.")
             return redirect('user_list')
@@ -1450,6 +1464,7 @@ def delete_user(request, user_id):
     
     username = user_to_delete.username
     
+    # Delete related records based on role
     if user_to_delete.role == 'STUDENT':
         Students.objects.filter(user=user_to_delete).delete()
     elif user_to_delete.role == 'TEACHER':
@@ -1516,3 +1531,53 @@ def register_page(request):
 def offline_page(request):
     """Offline page when user has no internet connection"""
     return render(request, 'accounts/offline.html')
+
+
+@login_required
+def super_admin_school_detail(request, school_id):
+    """View school details - Super Admin only"""
+    if request.user.role != 'SUPER_ADMIN':
+        messages.error(request, "Only Super Admin can access this page.")
+        return redirect('dashboard')
+    
+    from django.db import models
+    from students.models import Students
+    from academic.models import Teacher, Classroom
+    from finance.models import Payement
+    
+    school = get_object_or_404(School, id=school_id)
+    
+    context = {
+        'school': school,
+        'student_count': Students.objects.filter(school=school).count(),
+        'teacher_count': Teacher.objects.filter(school=school).count(),
+        'classroom_count': Classroom.objects.filter(school=school).count(),
+        'payment_total': Payement.objects.filter(school=school).aggregate(total=models.Sum('amount_paid'))['total'] or 0,
+        'recent_students': Students.objects.filter(school=school).order_by('-id')[:10],
+    }
+    return render(request, 'accounts/school_detail.html', context)
+
+
+@login_required
+def super_admin_delete_school(request, school_id):
+    """Delete a school - Super Admin only"""
+    if request.user.role != 'SUPER_ADMIN':
+        messages.error(request, "Only Super Admin can delete schools.")
+        return redirect('dashboard')
+    
+    school = get_object_or_404(School, id=school_id)
+    
+    if request.method == 'POST':
+        school_name = school.name
+        # Delete related data first
+        Students.objects.filter(school=school).delete()
+        Teacher.objects.filter(school=school).delete()
+        Payement.objects.filter(school=school).delete()
+        User.objects.filter(school=school).update(school=None)
+        school.delete()
+        messages.success(request, f"School '{school_name}' has been deleted successfully!")
+        return redirect('super_admin_schools')
+    
+    return render(request, 'accounts/confirm_delete_school.html', {'school': school})
+
+
