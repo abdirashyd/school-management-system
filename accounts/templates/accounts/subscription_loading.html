@@ -5,6 +5,8 @@
 
 {% block content %}
 
+{% if payment_type == 'stk' %}
+<!-- STK Push Loading Screen -->
 <div class="payment-processing">
     <div class="processing-card">
         <div class="processing-icon">
@@ -29,19 +31,83 @@
     </div>
 </div>
 
+{% elif payment_type == 'manual' %}
+<!-- Manual Payment Confirmation Screen -->
+<div class="manual-processing">
+    <div class="processing-card success-card">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h2>Request Sent!</h2>
+        <div class="payment-details">
+            <div class="detail-row">
+                <span>Amount:</span>
+                <strong>KES {{ amount|floatformat:0 }}</strong>
+            </div>
+            <div class="detail-row">
+                <span>Plan:</span>
+                <strong>{{ plan_name }}</strong>
+            </div>
+        </div>
+        <div class="notification-box">
+            <i class="fas fa-bell"></i>
+            <p>The Super Admin has been notified. Your school will be activated once payment is confirmed.</p>
+        </div>
+        <div class="action-buttons">
+            <button onclick="window.location.href='{% url 'subscription_dashboard' %}'" class="btn-dashboard">
+                <i class="fas fa-tachometer-alt"></i> Back to Dashboard
+            </button>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Error / Fallback -->
+<div class="error-processing">
+    <div class="processing-card error-card">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h2>Something Went Wrong</h2>
+        <p>Unable to process your request. Please try again.</p>
+        <div class="action-buttons">
+            <button onclick="window.location.href='{% url 'subscription_dashboard' %}'" class="btn-dashboard">
+                Back to Dashboard
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <style>
-.payment-processing {
+/* Shared Styles */
+.payment-processing,
+.manual-processing,
+.error-processing {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.95));
-    backdrop-filter: blur(10px);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.payment-processing {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.95));
+    backdrop-filter: blur(10px);
+}
+
+.manual-processing {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+    backdrop-filter: blur(10px);
+}
+
+.error-processing {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+    backdrop-filter: blur(10px);
 }
 
 .processing-card {
@@ -83,6 +149,21 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.success-icon,
+.error-icon {
+    margin-bottom: 1rem;
+}
+
+.success-icon i {
+    font-size: 4rem;
+    color: #10b981;
+}
+
+.error-icon i {
+    font-size: 4rem;
+    color: #ef4444;
 }
 
 .processing-card h2 {
@@ -137,8 +218,73 @@
     font-weight: 700;
     color: #dc2626;
 }
+
+.notification-box {
+    background: #fef3c7;
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.notification-box i {
+    font-size: 1.5rem;
+    color: #f59e0b;
+    margin-bottom: 0.5rem;
+}
+
+.notification-box p {
+    font-size: 0.8rem;
+    color: #92400e;
+    margin: 0;
+}
+
+.action-buttons {
+    margin-top: 1rem;
+}
+
+.btn-dashboard {
+    background: linear-gradient(135deg, #2563eb, #10b981);
+    color: white;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-dashboard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.success-card .btn-dashboard {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.success-card .btn-dashboard:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+@media (max-width: 480px) {
+    .processing-card {
+        padding: 1.5rem;
+    }
+    
+    .processing-card h2 {
+        font-size: 1.25rem;
+    }
+    
+    .success-icon i,
+    .error-icon i {
+        font-size: 3rem;
+    }
+}
 </style>
 
+{% if payment_type == 'stk' %}
 <script>
 let paymentId = {{ payment_id }};
 let timeLeft = 60;
@@ -173,5 +319,13 @@ function startTimer() {
 startTimer();
 checkInterval = setInterval(checkPaymentStatus, 2000);
 </script>
+{% elif payment_type == 'manual' %}
+<script>
+// Auto redirect after 5 seconds
+setTimeout(function() {
+    window.location.href = "{% url 'subscription_dashboard' %}";
+}, 5000);
+</script>
+{% endif %}
 
 {% endblock %}

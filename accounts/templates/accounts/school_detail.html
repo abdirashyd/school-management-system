@@ -20,6 +20,11 @@
             <a href="{% url 'super_admin_delete_school' school.id %}" class="btn-danger" onclick="return confirm('Are you sure you want to delete this school?')">
                 <i class="fas fa-trash"></i> Delete School
             </a>
+            {% if request.user.role == 'SUPER_ADMIN' %}
+                <a href="{% url 'confirm_subscription_payment' school.id %}" class="btn-success" onclick="return confirm('Confirm payment for {{ school.name }}? This will activate their subscription.')">
+                    <i class="fas fa-check-circle"></i> Confirm Payment
+                </a>
+            {% endif %}
         </div>
     </div>
     

@@ -295,9 +295,11 @@
                                     <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
                                 {% endfor %}
                             {% else %}
-                                {% for classroom in my_classes %}
-                                    <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
-                                {% endfor %}
+                                {% if request.user.role == 'TEACHER' %}
+                                    {% for classroom in my_classes %}
+                                        <option value="{{ classroom.id }}">{{ classroom.name }} {% if classroom.stream %}({{ classroom.stream }}){% endif %}</option>
+                                    {% endfor %}
+                                {% endif %}
                             {% endif %}
                         </select>
                         {% if request.user.role == 'TEACHER' %}

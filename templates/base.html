@@ -23,21 +23,31 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Petit+Formal+Script&family=Quintessential&family=Tangerine&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Subscription block for non-admin users -->
-    {% if request.user.is_authenticated and request.user.school and request.user.role != 'SUPER_ADMIN' and request.user.role != 'ADMIN' %}
-        {% with sub=request.user.school.subscription %}
-            {% if not sub.can_access_system %}
-                <div class="user-subscription-block">
-                    <div class="user-subscription-modal">
-                        <div class="modal-icon"><i class="fas fa-school"></i></div>
-                        <h3 class="modal-title">School Access Suspended</h3>
-                        <p class="modal-message">Your school's subscription has expired. Please contact your school administrator to restore access.</p>
+<!-- Subscription block for non-admin users AND School Admin when expired -->
+{% if request.user.is_authenticated and request.user.school and request.user.role != 'SUPER_ADMIN' %}
+    {% with sub=request.user.school.subscription %}
+        {% if not sub.can_access_system %}
+            <div class="user-subscription-block">
+                <div class="user-subscription-modal">
+                    <div class="modal-icon"><i class="fas fa-school"></i></div>
+                    <h3 class="modal-title">School Access Suspended</h3>
+                    <p class="modal-message">
+                        {% if request.user.role == 'ADMIN' %}
+                            Your school's subscription has expired. Please renew your subscription to restore access.
+                        {% else %}
+                            Your school's subscription has expired. Please contact your school administrator to restore access.
+                        {% endif %}
+                    </p>
+                    {% if request.user.role == 'ADMIN' %}
+                        <a href="{% url 'subscription_dashboard' %}" class="modal-button">View Subscription</a>
+                    {% else %}
                         <button class="modal-button" onclick="window.location.reload()">Try Again</button>
-                    </div>
+                    {% endif %}
                 </div>
-            {% endif %}
-        {% endwith %}
-    {% endif %}
+            </div>
+        {% endif %}
+    {% endwith %}
+{% endif %}
 
     <!-- Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>

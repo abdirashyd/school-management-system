@@ -95,6 +95,44 @@
         </div>
     </div>
 </div>
+<!-- Pending Subscription Requests Card for Super Admin -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-clock"></i> Pending Subscription Payments</h3>
+        <a href="{% url 'super_admin_schools' %}" class="view-all">View All →</a>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>School</th>
+                    <th>Amount</th>
+                    <th>Plan</th>
+                    <th>Requested By</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in pending_payments %}
+                <tr>
+                    <td><strong>{{ payment.school.name }}</strong></td>
+                    <td>KES {{ payment.amount|floatformat:0 }}</td>
+                    <td>{{ payment.get_billing_cycle_display }}</td>
+                    <td>{{ payment.subscription.school.users.filter.role.ADMIN.first.get_full_name|default:"Admin" }}</td>
+                    <td>
+                        <a href="{% url 'confirm_subscription_payment' payment.school.id %}" class="btn-success btn-sm" onclick="return confirm('Confirm payment for {{ payment.school.name }}?')">
+                            Confirm
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="empty-state">No pending payments</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 
 <!-- ========== SCHOOL ADMIN DASHBOARD ========== -->
 {% elif request.user.role == 'ADMIN' %}

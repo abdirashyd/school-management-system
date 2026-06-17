@@ -45,6 +45,8 @@ def teacher_list(request):
         teachers = Teacher.objects.all()
     elif user.role == 'ADMIN':
         teachers = Teacher.objects.filter(school=user.school)
+    elif user.role == 'HEAD_TEACHER':
+        teachers = Teacher.objects.filter(school=user.school)
     elif user.role == 'TEACHER':
         teachers = Teacher.objects.filter(user=user)
     else:
@@ -606,7 +608,7 @@ def subject_list(request):
 @login_required
 def add_classroom(request):
     # Only School Admin can add classrooms
-    if request.user.role != 'ADMIN':
+    if request.user.role != 'HEAD_TEACHER':
         messages.error(request, "Only School Admin can add classrooms.")
         return redirect('classroom_list')
     

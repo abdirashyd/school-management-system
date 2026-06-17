@@ -51,16 +51,21 @@
             <li><i class="fas fa-check-circle"></i> Technical support included</li>
             <li><i class="fas fa-check-circle"></i> Monthly billing cycle</li>
         </ul>
-        {% if subscription.billing_cycle == 'MONTHLY' %}
-            <button class="pricing-btn current" disabled>Current Plan</button>
-        {% else %}
-            <form method="POST" action="{% url 'initiate_subscription_payment' %}">
-                {% csrf_token %}
-                <input type="hidden" name="billing_cycle" value="MONTHLY">
-                <input type="hidden" name="phone_number" id="phone_monthly" value="">
-                <button type="button" class="pricing-btn" onclick="showPaymentModal('MONTHLY', '{{ monthly_fee|floatformat:0 }}')">Switch to Monthly</button>
-            </form>
-        {% endif %}
+        <div class="pricing-actions">
+            {% if subscription.billing_cycle == 'MONTHLY' %}
+                <button class="pricing-btn current" disabled>Current Plan</button>
+            {% else %}
+                <button class="pricing-btn manual-btn" onclick="showManualPaymentModal('MONTHLY', '{{ monthly_fee|floatformat:0 }}')">
+                    <i class="fas fa-check-circle"></i> Request Manual Payment
+                </button>
+                <!-- STK Push Button - Commented out for now, uncomment when Paybill is ready -->
+                <!--
+                <button class="pricing-btn stk-btn" onclick="showSTKPushModal('MONTHLY', '{{ monthly_fee|floatformat:0 }}')">
+                    <i class="fas fa-phone-alt"></i> Pay via M-Pesa
+                </button>
+                -->
+            {% endif %}
+        </div>
     </div>
 
     <!-- Termly Plan -->
@@ -86,16 +91,20 @@
             <li><i class="fas fa-check-circle"></i> Best for term-based budgeting</li>
             <li><i class="fas fa-check-circle"></i> Priority support</li>
         </ul>
-        {% if subscription.billing_cycle == 'TERMLY' %}
-            <button class="pricing-btn current" disabled>Current Plan</button>
-        {% else %}
-            <form method="POST" action="{% url 'initiate_subscription_payment' %}">
-                {% csrf_token %}
-                <input type="hidden" name="billing_cycle" value="TERMLY">
-                <input type="hidden" name="phone_number" id="phone_termly" value="">
-                <button type="button" class="pricing-btn" onclick="showPaymentModal('TERMLY', '{{ termly_fee|floatformat:0 }}')">Switch to Termly</button>
-            </form>
-        {% endif %}
+        <div class="pricing-actions">
+            {% if subscription.billing_cycle == 'TERMLY' %}
+                <button class="pricing-btn current" disabled>Current Plan</button>
+            {% else %}
+                <button class="pricing-btn manual-btn" onclick="showManualPaymentModal('TERMLY', '{{ termly_fee|floatformat:0 }}')">
+                    <i class="fas fa-check-circle"></i> Request Manual Payment
+                </button>
+                <!--
+                <button class="pricing-btn stk-btn" onclick="showSTKPushModal('TERMLY', '{{ termly_fee|floatformat:0 }}')">
+                    <i class="fas fa-phone-alt"></i> Pay via M-Pesa
+                </button>
+                -->
+            {% endif %}
+        </div>
     </div>
 
     <!-- Annual Plan -->
@@ -121,34 +130,93 @@
             <li><i class="fas fa-check-circle"></i> Best value - save 20%</li>
             <li><i class="fas fa-check-circle"></i> Premium support + dedicated manager</li>
         </ul>
-        {% if subscription.billing_cycle == 'ANNUALLY' %}
-            <button class="pricing-btn current" disabled>Current Plan</button>
-        {% else %}
-            <form method="POST" action="{% url 'initiate_subscription_payment' %}">
-                {% csrf_token %}
-                <input type="hidden" name="billing_cycle" value="ANNUALLY">
-                <input type="hidden" name="phone_number" id="phone_annual" value="">
-                <button type="button" class="pricing-btn" onclick="showPaymentModal('ANNUALLY', '{{ annual_fee|floatformat:0 }}')">Switch to Annual</button>
-            </form>
-        {% endif %}
+        <div class="pricing-actions">
+            {% if subscription.billing_cycle == 'ANNUALLY' %}
+                <button class="pricing-btn current" disabled>Current Plan</button>
+            {% else %}
+                <button class="pricing-btn manual-btn" onclick="showManualPaymentModal('ANNUALLY', '{{ annual_fee|floatformat:0 }}')">
+                    <i class="fas fa-check-circle"></i> Request Manual Payment
+                </button>
+                <!--
+                <button class="pricing-btn stk-btn" onclick="showSTKPushModal('ANNUALLY', '{{ annual_fee|floatformat:0 }}')">
+                    <i class="fas fa-phone-alt"></i> Pay via M-Pesa
+                </button>
+                -->
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<!-- Payment Modal -->
-<div id="paymentModal" class="payment-modal" style="display: none;">
+<!-- ========== MANUAL PAYMENT MODAL ========== -->
+<div id="manualPaymentModal" class="payment-modal" style="display: none;">
     <div class="payment-modal-content">
         <div class="payment-modal-header">
-            <h3><i class="fas fa-credit-card"></i> Complete Payment</h3>
-            <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+            <h3><i class="fas fa-phone-alt"></i> Manual Payment Request</h3>
+            <button class="modal-close" onclick="closeManualPaymentModal()">&times;</button>
         </div>
         <div class="payment-modal-body">
             <div class="payment-summary">
-                <div class="payment-plan" id="modalPlanName">Monthly Plan</div>
-                <div class="payment-amount" id="modalAmount">KES 0</div>
+                <div class="payment-plan" id="manualModalPlanName">Monthly Plan</div>
+                <div class="payment-amount" id="manualModalAmount">KES 0</div>
             </div>
-            <form id="paymentForm" method="POST" action="{% url 'initiate_subscription_payment' %}">
+            
+            <div class="manual-payment-info">
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p><strong>Send payment to:</strong></p>
+                    <div class="mpesa-number">
+                        <i class="fas fa-phone-alt"></i> <strong>07XX XXX XXX</strong>
+                    </div>
+                    <small>After sending payment, click "I Have Paid" below. The Super Admin will be notified and will activate your school within 24 hours.</small>
+                </div>
+            </div>
+            
+            <form id="manualPaymentForm" method="POST" action="{% url 'manual_subscription_payment' %}">
                 {% csrf_token %}
-                <input type="hidden" name="billing_cycle" id="modalBillingCycle">
+                <input type="hidden" name="billing_cycle" id="manualModalBillingCycle">
+                <button type="submit" class="btn-pay">
+                    <i class="fas fa-check-circle"></i> I Have Paid
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MANUAL PAYMENT SUCCESS MODAL ========== -->
+<div id="manualPaymentSuccessModal" class="payment-modal" style="display: none;">
+    <div class="payment-modal-content success-modal">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="payment-modal-body" style="text-align: center;">
+            <h3 class="success-title">Request Sent!</h3>
+            <p>Your payment request has been recorded successfully.</p>
+            <div class="notification-box">
+                <i class="fas fa-bell"></i>
+                <p>The Super Admin has been notified. Your school will be activated once payment is confirmed.</p>
+            </div>
+            <button onclick="window.location.href='{% url 'subscription_dashboard' %}'" class="btn-pay">
+                Back to Dashboard
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STK PUSH MODAL (FOR FUTURE USE - COMMENTED OUT BUT KEPT) ========== -->
+<div id="stkPushModal" class="payment-modal" style="display: none;">
+    <div class="payment-modal-content">
+        <div class="payment-modal-header">
+            <h3><i class="fas fa-credit-card"></i> Complete Payment</h3>
+            <button class="modal-close" onclick="closeSTKPushModal()">&times;</button>
+        </div>
+        <div class="payment-modal-body">
+            <div class="payment-summary">
+                <div class="payment-plan" id="stkModalPlanName">Monthly Plan</div>
+                <div class="payment-amount" id="stkModalAmount">KES 0</div>
+            </div>
+            <form id="stkPaymentForm" method="POST" action="{% url 'initiate_subscription_payment' %}">
+                {% csrf_token %}
+                <input type="hidden" name="billing_cycle" id="stkModalBillingCycle">
                 <div class="form-group">
                     <label><i class="fas fa-phone-alt"></i> M-Pesa Phone Number</label>
                     <input type="tel" name="phone_number" class="form-control" placeholder="0712345678" required>
@@ -158,6 +226,31 @@
                     <i class="fas fa-arrow-right"></i> Pay Now
                 </button>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== STK PUSH LOADING MODAL (FOR FUTURE USE) ========== -->
+<div id="stkLoadingModal" class="payment-processing" style="display: none;">
+    <div class="processing-card">
+        <div class="processing-icon">
+            <div class="spinner"></div>
+        </div>
+        <h2>Processing Payment</h2>
+        <div class="payment-details">
+            <div class="detail-row">
+                <span>Amount:</span>
+                <strong id="stkLoadingAmount">KES 0</strong>
+            </div>
+            <div class="detail-row">
+                <span>Phone:</span>
+                <strong id="stkLoadingPhone">-</strong>
+            </div>
+        </div>
+        <p class="instruction">Please check your phone and enter M-Pesa PIN</p>
+        <div class="timer">
+            <i class="fas fa-hourglass-half"></i>
+            Time remaining: <span id="stkSeconds">60</span> seconds
         </div>
     </div>
 </div>
@@ -249,7 +342,7 @@
 /* Pricing Grid */
 .pricing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -261,12 +354,12 @@
     text-align: center;
     position: relative;
     transition: all 0.3s;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .pricing-card:hover {
     transform: translateY(-5px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
 .pricing-card.popular {
@@ -359,6 +452,13 @@
     width: 18px;
 }
 
+.pricing-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
 .pricing-btn {
     width: 100%;
     padding: 0.7rem;
@@ -367,19 +467,31 @@
     cursor: pointer;
     transition: all 0.2s;
     border: none;
-    background: linear-gradient(135deg, #2563eb, #10b981);
     color: white;
-}
-
-.pricing-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .pricing-btn.current {
     background: #e2e8f0;
     color: #64748b;
     cursor: not-allowed;
+}
+
+.manual-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.manual-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.stk-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.stk-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 /* Payment Modal */
@@ -440,6 +552,10 @@
     color: #64748b;
 }
 
+.modal-close:hover {
+    color: #dc2626;
+}
+
 .payment-modal-body {
     padding: 1.5rem;
 }
@@ -461,6 +577,198 @@
     font-size: 1.8rem;
     font-weight: 800;
     color: #1e293b;
+}
+
+/* Manual Payment Info Box */
+.manual-payment-info {
+    margin-bottom: 1.5rem;
+}
+
+.info-box {
+    background: #f0f9ff;
+    padding: 1rem;
+    border-radius: 16px;
+    text-align: center;
+    border-left: 4px solid #2563eb;
+}
+
+.info-box i {
+    font-size: 1.5rem;
+    color: #2563eb;
+    margin-bottom: 0.5rem;
+}
+
+.info-box p {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.mpesa-number {
+    background: #d1fae5;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 40px;
+    margin: 0.5rem 0;
+}
+
+.mpesa-number i {
+    font-size: 0.9rem;
+    margin-right: 0.3rem;
+}
+
+.info-box small {
+    font-size: 0.7rem;
+    color: #64748b;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+/* Success Modal */
+.success-modal {
+    text-align: center;
+}
+
+.success-icon {
+    text-align: center;
+    padding-top: 2rem;
+}
+
+.success-icon i {
+    font-size: 4rem;
+    color: #10b981;
+}
+
+.success-title {
+    color: #10b981;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.notification-box {
+    background: #fef3c7;
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.notification-box i {
+    font-size: 1.5rem;
+    color: #f59e0b;
+    margin-bottom: 0.5rem;
+}
+
+.notification-box p {
+    font-size: 0.85rem;
+    color: #92400e;
+}
+
+/* STK Push Loading Modal */
+.payment-processing {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.95));
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.processing-card {
+    background: white;
+    border-radius: 32px;
+    padding: 2rem;
+    text-align: center;
+    max-width: 380px;
+    width: 90%;
+    animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.processing-icon {
+    margin-bottom: 1.5rem;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #10b981;
+    border-right: 4px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.processing-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #1e293b;
+}
+
+.payment-details {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+}
+
+.detail-row span {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.detail-row strong {
+    color: #1e293b;
+    font-size: 0.9rem;
+}
+
+.instruction {
+    color: #475569;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.timer {
+    font-size: 0.8rem;
+    color: #64748b;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.timer i {
+    margin-right: 0.3rem;
+    color: #f59e0b;
+}
+
+.timer span {
+    font-weight: 700;
+    color: #dc2626;
 }
 
 .btn-pay {
@@ -538,6 +846,40 @@
     color: #64748b;
 }
 
+/* Form Group */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #374151;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group small {
+    display: block;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.3rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .pricing-grid {
@@ -552,6 +894,10 @@
     .status-banner {
         padding: 0.8rem 1rem;
     }
+    
+    .pricing-actions {
+        flex-direction: column;
+    }
 }
 </style>
 
@@ -559,28 +905,104 @@
 let selectedCycle = '';
 let selectedAmount = '';
 
-function showPaymentModal(cycle, amount) {
+// ========== MANUAL PAYMENT FUNCTIONS ==========
+function showManualPaymentModal(cycle, amount) {
     selectedCycle = cycle;
     selectedAmount = amount;
     
-    document.getElementById('modalPlanName').innerText = 
+    document.getElementById('manualModalPlanName').innerText = 
         cycle === 'MONTHLY' ? 'Monthly Plan' : 
         cycle === 'TERMLY' ? 'Termly Plan' : 'Annual Plan';
-    document.getElementById('modalAmount').innerHTML = `KES ${parseInt(amount).toLocaleString()}`;
-    document.getElementById('modalBillingCycle').value = cycle;
-    document.getElementById('paymentModal').style.display = 'flex';
+    document.getElementById('manualModalAmount').innerHTML = `KES ${parseInt(amount).toLocaleString()}`;
+    document.getElementById('manualModalBillingCycle').value = cycle;
+    document.getElementById('manualPaymentModal').style.display = 'flex';
 }
 
-function closePaymentModal() {
-    document.getElementById('paymentModal').style.display = 'none';
+function closeManualPaymentModal() {
+    document.getElementById('manualPaymentModal').style.display = 'none';
 }
 
-// Close modal when clicking outside
+// Handle manual payment form submission via AJAX
+document.getElementById('manualPaymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    closeManualPaymentModal();
+    
+    // Show success modal
+    document.getElementById('manualPaymentSuccessModal').style.display = 'flex';
+    
+    // Submit the form in background
+    fetch("{% url 'manual_subscription_payment' %}", {
+        method: 'POST',
+        body: new FormData(this),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => response.json())
+      .then(data => {
+          if (!data.success) {
+              console.log('Error:', data.error);
+          }
+      }).catch(error => console.log('Error:', error));
+});
+
+function closeSuccessModal() {
+    document.getElementById('manualPaymentSuccessModal').style.display = 'none';
+}
+
+// ========== STK PUSH FUNCTIONS (FOR FUTURE USE - COMMENTED OUT) ==========
+// Uncomment these when you get Paybill and want to re-enable STK Push
+
+/*
+function showSTKPushModal(cycle, amount) {
+    selectedCycle = cycle;
+    selectedAmount = amount;
+    
+    document.getElementById('stkModalPlanName').innerText = 
+        cycle === 'MONTHLY' ? 'Monthly Plan' : 
+        cycle === 'TERMLY' ? 'Termly Plan' : 'Annual Plan';
+    document.getElementById('stkModalAmount').innerHTML = `KES ${parseInt(amount).toLocaleString()}`;
+    document.getElementById('stkModalBillingCycle').value = cycle;
+    document.getElementById('stkPushModal').style.display = 'flex';
+}
+
+function closeSTKPushModal() {
+    document.getElementById('stkPushModal').style.display = 'none';
+}
+
+function showSTKLoadingModal(phone, amount) {
+    document.getElementById('stkLoadingAmount').innerHTML = `KES ${parseInt(amount).toLocaleString()}`;
+    document.getElementById('stkLoadingPhone').innerHTML = phone;
+    document.getElementById('stkLoadingModal').style.display = 'flex';
+    
+    let timeLeft = 60;
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        const secondsSpan = document.getElementById('stkSeconds');
+        if (secondsSpan) secondsSpan.innerText = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            document.getElementById('stkLoadingModal').style.display = 'none';
+            alert('Payment timeout. Please try again.');
+        }
+    }, 1000);
+}
+
+function closeSTKLoadingModal() {
+    document.getElementById('stkLoadingModal').style.display = 'none';
+}
+*/
+
+// Close modals when clicking outside
 window.onclick = function(event) {
-    const modal = document.getElementById('paymentModal');
-    if (event.target === modal) {
-        closePaymentModal();
-    }
+    const manualModal = document.getElementById('manualPaymentModal');
+    const successModal = document.getElementById('manualPaymentSuccessModal');
+    const stkModal = document.getElementById('stkPushModal');
+    const stkLoadingModal = document.getElementById('stkLoadingModal');
+    
+    if (event.target === manualModal) closeManualPaymentModal();
+    if (event.target === successModal) closeSuccessModal();
+    // if (event.target === stkModal) closeSTKPushModal();
+    // if (event.target === stkLoadingModal) closeSTKLoadingModal();
 }
 </script>
 

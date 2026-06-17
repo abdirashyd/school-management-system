@@ -221,6 +221,111 @@ def subscription_mpesa_callback(request):
         return JsonResponse({"ResultCode": 1, "ResultDesc": str(e)})
 
 
+@login_required
+def manual_subscription_payment(request):
+    """Handle manual subscription payment request"""
+    if request.user.role != 'ADMIN':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': "Access denied."})
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        billing_cycle = request.POST.get('billing_cycle')
+        subscription = request.user.school.subscription
+        
+        # Update billing cycle
+        subscription.billing_cycle = billing_cycle
+        subscription.save()
+        
+        amount = subscription.get_current_fee()
+        
+        # Create a pending payment record (manual)
+        payment = SubscriptionPayment.objects.create(
+            subscription=subscription,
+            school=request.user.school,
+            amount=amount,
+            billing_cycle=billing_cycle,
+            period_start=timezone.now(),
+            period_end=None,
+            status='PENDING',
+        )
+        
+        # Send notification to Super Admin
+        from notification.models import Notification
+        from accounts.models import User
+        
+        super_admins = User.objects.filter(role='SUPER_ADMIN')
+        school_name = request.user.school.name
+        admin_name = request.user.get_full_name() or request.user.username
+        
+        for admin in super_admins:
+            Notification.objects.create(
+                sender=request.user,
+                recipient=admin,
+                title=" New Subscription Payment Request",
+                message=f"{admin_name} from {school_name} requests to pay KES {amount:,.0f} for {billing_cycle} plan. Please confirm payment.",
+                notification_type='FEE'
+            )
+        
+        # If AJAX request, return JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Request sent successfully'})
+        
+        # For regular form submission, show loading page
+        plan_names = {
+            'MONTHLY': 'Monthly Plan',
+            'TERMLY': 'Termly Plan',
+            'ANNUALLY': 'Annual Plan'
+        }
+        
+        return render(request, 'accounts/subscription_loading.html', {
+            'payment_type': 'manual',
+            'amount': amount,
+            'plan_name': plan_names.get(billing_cycle, billing_cycle),
+        })
+    
+    return redirect('subscription_dashboard')
+
+@login_required
+def confirm_subscription_payment(request, school_id):
+    """Super Admin - Confirm manual payment and activate school"""
+    if request.user.role != 'SUPER_ADMIN':
+        messages.error(request, "Only Super Admin can confirm payments.")
+        return redirect('dashboard')
+    
+    school = get_object_or_404(School, id=school_id)
+    subscription = school.subscription
+    
+    # Update subscription status
+    subscription.status = 'ACTIVE'
+    subscription.is_first_month = False
+    subscription.update_billing_dates()
+    subscription.save()
+    
+    # Update any pending payments to completed
+    SubscriptionPayment.objects.filter(
+        school=school,
+        status='PENDING'
+    ).update(status='COMPLETED', paid_at=timezone.now())
+    
+    # ✅ SEND NOTIFICATION TO SCHOOL ADMIN
+    from notification.models import Notification
+    
+    # Get the school admin
+    school_admins = User.objects.filter(role='ADMIN', school=school)
+    
+    for admin in school_admins:
+        Notification.objects.create(
+            sender=request.user,
+            recipient=admin,
+            title="✅ Subscription Activated",
+            message=f"Your subscription payment has been confirmed. Your school is now active until {subscription.current_period_end.strftime('%d %b %Y')}.",
+            notification_type='FEE'
+        )
+    
+    messages.success(request, f"Subscription payment confirmed for {school.name}. School is now active.")
+    return redirect('super_admin_school_detail', school_id=school_id)
 
 
 
@@ -393,7 +498,7 @@ def dashboard_view(request):
     from django.utils import timezone
     from datetime import timedelta
     from finance.models import Payement
-    from .models import SubscriptionPayment  # Add both models
+    from .models import SubscriptionPayment  
     
     user = request.user
     
@@ -401,6 +506,8 @@ def dashboard_view(request):
     if user.role == 'SUPER_ADMIN':
         subjects = Subject.objects.all()
         improvements = []
+        # Get pending subscription payments
+      
         
         for subject in subjects:
             result = Results.objects.filter(subject=subject).aggregate(avg=Avg('marks_obtained'))
@@ -450,7 +557,11 @@ def dashboard_view(request):
         recent_payments = SubscriptionPayment.objects.filter(
             status='COMPLETED'
         ).order_by('-created_at')[:5]
-        
+
+        pending_payments = SubscriptionPayment.objects.filter(
+            status='PENDING'
+        ).select_related('school', 'subscription').order_by('-created_at')
+
         # Get schools with their stats
         schools = School.objects.all().order_by('-created_at')
         for school in schools:
@@ -474,6 +585,7 @@ def dashboard_view(request):
             'plan_expiry': '01/05/2024',
             'improvements': improvements,
             'schools': schools,
+            'pending_payments': pending_payments,
         }
         return render(request, 'dashboard.html', context)
     
@@ -1043,12 +1155,14 @@ def register_student_view(request):
         return redirect('dashboard')
     
     # If user is TEACHER, check if they are a class teacher
+    teacher_classes = []
     if request.user.role == 'TEACHER':
-        # Get classrooms where this teacher is the class_teacher
-        my_classes = Classroom.objects.filter(class_teacher=request.user)
-        if not my_classes.exists():
+        teacher_classes = Classroom.objects.filter(class_teacher=request.user)
+        if not teacher_classes.exists():
             messages.error(request, "You are not assigned as a class teacher. Please contact Head Teacher.")
             return redirect('dashboard')
+        # Store the class IDs for validation
+        teacher_class_ids = [c.id for c in teacher_classes]
     
     if request.method == "POST":
         class_id = request.POST.get('grade_level')
@@ -1065,6 +1179,13 @@ def register_student_view(request):
         try:
             with transaction.atomic():
                 selected_class = Classroom.objects.get(id=class_id)
+                
+                # ✅ NEW: Validate teacher can only add to their own class
+                if request.user.role == 'TEACHER':
+                    if selected_class.id not in teacher_class_ids:
+                        messages.error(request, f"You can only add students to your assigned class ({teacher_classes.first().name if teacher_classes else 'None'}).")
+                        return redirect('register_students')
+                
                 admission_number = request.POST.get('admission_number')
                 admission_number = admission_number.strip().upper()
                 
@@ -1076,7 +1197,6 @@ def register_student_view(request):
                     messages.error(request, f"Username {admission_number} is already taken!")
                     return redirect('register_students')
                 
-                # ✅ REMOVED SUPER ADMIN check - school comes from user's profile
                 school = request.user.school
                 
                 user = User.objects.create_user(
@@ -1104,6 +1224,7 @@ def register_student_view(request):
                     school=school,
                 )
 
+                # Send notification to Head Teacher
                 if selected_class.class_teacher:
                     from notification.models import Notification
                     Notification.objects.create(
@@ -1125,13 +1246,12 @@ def register_student_view(request):
             messages.error(request, f"Error: {e}")
 
     # ========== GET REQUEST - Load form with appropriate data ==========
-    # ✅ REMOVED SUPER ADMIN from GET section
     if request.user.role == 'TEACHER':
-        # Class Teacher - only see their own classes
+        # Class Teacher - only see their OWN classes
         all_classrooms = Classroom.objects.filter(class_teacher=request.user)
         all_parents = User.objects.filter(role='PARENT', school=request.user.school)
     else:  # HEAD_TEACHER
-        # Head Teacher sees all classes in their school
+        # Head Teacher sees all classes in their school (emergency only)
         all_classrooms = Classroom.objects.filter(school=request.user.school)
         all_parents = User.objects.filter(role='PARENT', school=request.user.school)
 
@@ -1144,7 +1264,7 @@ def register_student_view(request):
 def register_head_teacher(request):
     """Register a Head Teacher - Only School Admin (Director) can do this"""
     
-    # ✅ Check for ADMIN role (School Director)
+    # Check for ADMIN role (School Director)
     if request.user.role != 'ADMIN':
         messages.error(request, "Only School Admin can register head teachers.")
         return redirect('dashboard')
@@ -1184,7 +1304,7 @@ def register_head_teacher(request):
                     password=settings.DEFAULT_PASSWORD,
                     first_name=f_name,
                     last_name=l_name,
-                    role='HEAD_TEACHER',  # ✅ Make sure this is correct
+                    role='HEAD_TEACHER',  # Make sure this is correct
                     is_approved=True,
                     phone_number=phone,
                     school=school,

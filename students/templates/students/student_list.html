@@ -6,7 +6,7 @@
 {% block content %}
 
 <div class="dashboard-header">
-    <h1>👨‍🎓 Students</h1>
+    <h1>Students</h1>
     <p>Manage all students in the system</p>
 </div>
 
@@ -14,7 +14,7 @@
 <div class="modern-card">
     <div class="card-header-modern">
         <h3><i class="fas fa-search"></i> Search Students</h3>
-        {% if request.user.role == 'SUPER_ADMIN' or request.user.role == 'HEAD_TEACHER' %}
+        {% if request.user.role == 'TEACHER' or request.user.role == 'HEAD_TEACHER' %}
         <a href="{% url 'register_page' %}" class="btn-primary">
             <i class="fas fa-plus"></i> Add Student
         </a>

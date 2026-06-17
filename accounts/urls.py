@@ -7,7 +7,7 @@ from .views import (
     change_password, super_admin_schools_list, super_admin_add_school,
     super_admin_school_detail, super_admin_delete_school, register_admin_view,
     subscription_dashboard, initiate_subscription_payment, check_subscription_payment,
-    subscription_mpesa_callback
+    subscription_mpesa_callback,manual_subscription_payment,confirm_subscription_payment
 )
 
 urlpatterns = [
@@ -37,4 +37,6 @@ urlpatterns = [
     path('check-subscription-payment/<int:payment_id>/', check_subscription_payment, name='check_subscription_payment'),
     path('subscription-mpesa-callback/', subscription_mpesa_callback, name='subscription_mpesa_callback'),
     path('offline/', offline_page, name='offline_page'),
+    path('manual-subscription-payment/', manual_subscription_payment, name='manual_subscription_payment'),
+    path('confirm-subscription-payment/<int:school_id>/', confirm_subscription_payment, name='confirm_subscription_payment'),
 ]
