@@ -350,6 +350,12 @@ def download_results_pdf(request, identifier, exam_id):
     if user.role in ['ADMIN', 'TEACHER']:
         # Class Results
         classroom = get_object_or_404(Classroom, id=identifier)
+    elif user.role == 'TEACHER':
+        teacher = Teacher.objects.get(user=user)
+        # Check if teacher teaches this class
+        if not SubjectAllocation.objects.filter(teacher=teacher, classroom=classroom).exists():
+            messages.error(request, "You can only download results for classes you teach.")
+            return redirect('dashboard')
         
         # Permission checks
         if user.role == 'ADMIN' and classroom.school != user.school:

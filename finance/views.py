@@ -56,6 +56,17 @@ def process_payment(request):
     if request.user.role not in ['SUPER_ADMIN', 'ADMIN']:
         messages.error(request, "Only administrators can process payments.")
         return redirect('payement_detail')
+    # finance/views.py - process_payment()
+
+    if request.method == 'POST':
+        ref_code = request.POST.get('reference', '').upper()
+        
+        # ✅ CHECK FOR DUPLICATE
+        if Payement.objects.filter(reference=ref_code).exists():
+            messages.error(request, f"Reference {ref_code} already exists! Please check.")
+        return redirect('payement_detail')
+    
+    # ... rest of code ...
     
     if request.method == 'POST':
         amount = request.POST.get('amount_paid')
@@ -122,31 +133,35 @@ def process_payment(request):
     
     return redirect('payement_detail')
 
+# finance/views.py - COMPLETE REWRITE NEEDED
+
 @login_required
 def mpesa_payment(request):
-    """Handle M-Pesa STK Push - WITHOUT saving to database first"""
     if request.method == 'POST':
         phone_number = request.POST.get('phone_number')
         amount = request.POST.get('amount')
         reg_number = request.POST.get('reg_number')
         month = request.POST.get('month')
         
-        if not all([phone_number, amount, reg_number, month]):
-            messages.error(request, "Please fill all fields.")
-            return redirect('payement_detail')
-        
-        # Format phone number
-        if phone_number.startswith('0'):
-            phone_number = '254' + phone_number[1:]
-        elif phone_number.startswith('+'):
-            phone_number = phone_number[1:]
-        
+        # Validate...
         student = Students.objects.filter(registration_number=reg_number).first()
         if not student:
-            messages.error(request, f"Student '{reg_number}' not found!")
+            messages.error(request, "Student not found!")
             return redirect('payement_detail')
         
-        # Initiate STK Push immediately without saving to Payement model
+        # ✅ STEP 1: Create pending payment FIRST
+        pending_payment = Payement.objects.create(
+            student=student,
+            amount_paid=amount,
+            reference=f"PENDING_{int(timezone.now().timestamp())}",
+            method='M-Pesa',
+            month=int(month),
+            year=timezone.now().year,
+            recorded_by=request.user,
+            school=student.school,
+        )
+        
+        # ✅ STEP 2: Send STK Push
         result = stk_push(
             phone_number=phone_number,
             amount=amount,
@@ -156,46 +171,59 @@ def mpesa_payment(request):
         
         if result.get('ResponseCode') == '0':
             checkout_id = result.get('CheckoutRequestID')
+            # ✅ STEP 3: Store CheckoutRequestID for callback matching
+            pending_payment.reference = checkout_id
+            pending_payment.save()
             
-            # Pass everything to the loading page template context
             return render(request, 'finance/payment_loading.html', {
-                'checkout_id': checkout_id,  # Track using Checkout ID in frontend
+                'payment_id': pending_payment.id,
                 'amount': amount,
                 'phone_number': phone_number,
-                'month': month,
-                'reg_number': reg_number,
                 'student_name': f"{student.first_name} {student.last_name}"
             })
         else:
-            error_msg = result.get('errorMessage', 'Payment initiation failed')
-            messages.error(request, f"Payment failed: {error_msg}")
+            pending_payment.delete()  # Remove on failure
+            messages.error(request, "Payment initiation failed.")
             return redirect('payement_detail')
-            
+    
     return redirect('payement_detail')
+
 
 @csrf_exempt
 def mpesa_callback(request):
     try:
         data = json.loads(request.body)
-        body = data.get('Body', {})
-        stk_callback = body.get('stkCallback', {})
+        stk_callback = data.get('Body', {}).get('stkCallback', {})
         result_code = stk_callback.get('ResultCode')
         checkout_request_id = stk_callback.get('CheckoutRequestID')
         
         if result_code == 0:
-            callback_metadata = stk_callback.get('CallbackMetadata', {})
-            items = callback_metadata.get('Item', [])
-            
+            # Get receipt number
+            items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
             mpesa_receipt = None
+            amount = None
             for item in items:
                 if item.get('Name') == 'MpesaReceiptNumber':
                     mpesa_receipt = item.get('Value')
+                elif item.get('Name') == 'Amount':
+                    amount = item.get('Value')
             
-            # Since we didn't create it earlier, we write it here on success!
-            # Note: You'll need to parse or fetch student info using checkout tracking,
-            # or map it if you choose to cache the registration details temporarily.
-            print(f"✅ Success callback received. Receipt: {mpesa_receipt}")
-            
+            # ✅ STEP 4: Find and update payment
+            payment = Payement.objects.filter(reference=checkout_request_id).first()
+            if payment:
+                payment.reference = mpesa_receipt  # Update with actual receipt
+                payment.save()
+                
+                # Send notifications
+                from notification.models import Notification
+                if payment.student.user:
+                    Notification.objects.create(
+                        recipient=payment.student.user,
+                        title="✅ Payment Successful",
+                        message=f"KES {amount:,.2f} confirmed. Receipt: {mpesa_receipt}",
+                        notification_type='FEE'
+                    )
+        
         return JsonResponse({"ResultCode": 0, "ResultDesc": "Success"})
     except Exception as e:
         return JsonResponse({"ResultCode": 1, "ResultDesc": str(e)})

@@ -6,8 +6,8 @@ const FILES_TO_CACHE = [
     '/',
     '/static/css/style.css',
     '/static/manifest.json',
-    '/static/icons/icon-192x192.png',
-    '/static/icons/icon-512x512.png'
+    '/static/icons/icon-192x192-v2.png',
+    '/static/icons/icon-512x512-v2.png'
 ];
 
 // Install event - cache files individually (one failure won't break everything)

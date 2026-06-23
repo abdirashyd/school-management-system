@@ -327,7 +327,28 @@ def confirm_subscription_payment(request, school_id):
     messages.success(request, f"Subscription payment confirmed for {school.name}. School is now active.")
     return redirect('super_admin_school_detail', school_id=school_id)
 
+# accounts/views.py - Add this view
 
+@login_required
+def super_admin_pending_payments(request):
+    """Super Admin - View ALL pending subscription payments"""
+    if request.user.role != 'SUPER_ADMIN':
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+    
+    pending_payments = SubscriptionPayment.objects.filter(
+        status='PENDING'
+    ).select_related('school', 'subscription').order_by('-created_at')
+    
+    # Also show overdue subscriptions
+    overdue_schools = School.objects.filter(
+        subscription__status='OVERDUE'
+    ).select_related('subscription')
+    
+    return render(request, 'accounts/pending_payments.html', {
+        'pending_payments': pending_payments,
+        'overdue_schools': overdue_schools,
+    })
 
 from .models import SchoolMpesaConfig
 from .forms import SchoolMpesaConfigForm
@@ -704,6 +725,7 @@ def dashboard_view(request):
         # Upcoming Exams (next 30 days) - REMOVED the school filter
         month_from_now = timezone.now() + timedelta(days=30)
         upcoming_exams = Exam.objects.filter(
+            school=school,  # ← ADD THIS!
             date_started__gte=timezone.now(),
             date_started__lte=month_from_now
         ).order_by('date_started')[:5]
