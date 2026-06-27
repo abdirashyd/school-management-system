@@ -5,22 +5,24 @@
 
 {% block content %}
 
-<div class="list-header">
-    <div class="list-title">
-        <h1><i class="fas fa-bell"></i> Notifications</h1>
-        <p>Your messages and announcements</p>
-    </div>
+<div class="dashboard-header" style="margin-bottom: 2rem;">
+    <h1 style="color: white; font-family: 'IBM Plex Sans', sans-serif; padding: 0; margin: 0;">
+        <i class="fas fa-bell"></i> Notifications
+    </h1>
+    <p style="color: rgba(255,255,255,0.8); padding: 0; margin: 0.5rem 0 0 0; font-size: 1rem;">
+        Your messages and announcements
+    </p>
 </div>
 
 <div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3>All Messages</h3>
-        <div class="action-buttons" style="display: flex; gap: 10px;">
-            <a href="?mark_all_read=1" class="btn-view" onclick="return confirm('Mark all notifications as read?')">
+    <div class="card-header">
+        <h3><i class="fas fa-envelope"></i> All Messages</h3>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <a href="?mark_all_read=1" class="btn-success" onclick="return confirm('Mark all notifications as read?')" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #10b981; color: white; border-radius: 40px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
                 <i class="fas fa-check-double"></i> Mark All Read
             </a>
             {% if request.user.role != 'STUDENT' and request.user.role != 'PARENT' %}
-            <a href="{% url 'send_notification' %}" class="btn-edit">
+            <a href="{% url 'send_notification' %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: linear-gradient(135deg, #2563eb, #10b981); color: white; border-radius: 40px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
                 <i class="fas fa-paper-plane"></i> New Notification
             </a>
             {% endif %}
@@ -28,54 +30,127 @@
     </div>
     
     {% if notifications %}
-        {% for notification in notifications %}
-        <div class="notification-item" style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                <div>
-                    <h4 style="margin: 0 0 5px 0;">
-                        {{ notification.title }}
-                    </h4>
-                    <div style="font-size: 12px; color: #6b7280;">
-                        <i class="fas fa-user"></i> From: {{ notification.sender.get_full_name|default:notification.sender.username }}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for notification in notifications %}
+            <div style="background: var(--gray-light); border-radius: 16px; padding: 1.25rem; transition: all 0.2s; border-left: 4px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div>
+                        <h4 style="font-size: 0.95rem; font-weight: 600; color: var(--dark); margin: 0 0 0.25rem 0;">
+                            {{ notification.title }}
+                        </h4>
+                        <div style="font-size: 0.75rem; color: var(--gray);">
+                            <i class="fas fa-user"></i> From: {{ notification.sender.get_full_name|default:notification.sender.username }}
+                        </div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--gray); white-space: nowrap;">
+                        <i class="fas fa-clock"></i> {{ notification.created_at|date:"d M Y, H:i" }}
                     </div>
                 </div>
-                <div style="font-size: 12px; color: #6b7280;">
-                    <i class="fas fa-clock"></i> {{ notification.created_at|date:"d M Y, H:i" }}
+                
+                <p style="font-size: 0.85rem; color: var(--dark); line-height: 1.6; margin: 0.75rem 0;">
+                    {{ notification.message }}
+                </p>
+                
+                <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                    <a href="{% url 'delete_notification' notification.id %}" onclick="return confirm('Delete this notification?')" class="btn-delete" style="padding: 0.25rem 0.75rem; font-size: 0.7rem; background: #fee2e2; color: #dc2626; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
                 </div>
             </div>
-            
-            <p style="margin: 12px 0; line-height: 1.5;">{{ notification.message }}</p>
-            
-            <div class="action-buttons" style="margin-top: 12px; display: flex; gap: 8px;">
-                <a href="{% url 'delete_notification' notification.id %}" onclick="return confirm('Delete this notification?')" class="btn-delete" style="background: #fee2e2; color: #dc2626; padding: 5px 12px; border-radius: 6px; text-decoration: none;">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     {% else %}
-        <div class="empty-state" style="text-align: center; padding: 50px; color: #9ca3af;">
-            <i class="fas fa-bell-slash" style="font-size: 48px; margin-bottom: 15px;"></i>
-            <p>No notifications yet</p>
+        <div class="empty-state" style="text-align: center; padding: 3rem; color: var(--gray);">
+            <i class="fas fa-bell-slash" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <p style="font-weight: 500;">No notifications yet</p>
+            <p style="font-size: 0.8rem;">You're all caught up!</p>
         </div>
     {% endif %}
 </div>
 
 <style>
+/* Card styles - already in your CSS */
 .card {
-    background: white;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
 }
-.btn-view:hover {
-    opacity: 0.8;
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
-.btn-edit:hover {
-    opacity: 0.8;
+.card-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.card-header h3 i {
+    color: var(--primary);
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.btn-success {
+    background: var(--secondary);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+.btn-success:hover {
+    background: var(--secondary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
 }
 .btn-delete:hover {
-    opacity: 0.8;
+    background: #fecaca;
+}
+@media (max-width: 768px) {
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 </style>
 

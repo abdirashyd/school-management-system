@@ -20,4 +20,6 @@ urlpatterns = [
     # Status check URLs (no duplicates)
     path('check-payment-status/<int:payment_id>/', views.check_payment_status, name='check_payment_status'),
     path('delete-pending-payment/<int:payment_id>/', views.delete_pending_payment, name='delete_pending_payment'),
+
+    path('finance-dashboard/', views.finance_dashboard, name='finance_dashboard'),
 ]

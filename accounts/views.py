@@ -28,11 +28,48 @@ import requests
 from .models import User, School, SchoolSubscription, SubscriptionPayment, SchoolMpesaConfig, SubscriptionInvoice
 from finance.mpesa_utility import stk_push  # Your existing M-Pesa utility
 
+
+# accounts/views.py
+from django.http import JsonResponse
+
+@login_required
+def check_auth(request):
+    """API endpoint to check if user is authenticated"""
+    return JsonResponse({
+        'is_authenticated': request.user.is_authenticated,
+        'username': request.user.username if request.user.is_authenticated else None,
+    })
+
+
 def landing_page(request):
-    # If user is already logged in, send them to dashboard
+    """
+    Landing page - Shows when user is not logged in
+    - Logged in users → Redirect to dashboard
+    - PWA users → Download button hidden (CSS handles this)
+    - Browser users → Download button visible
+    """
+    
+    # If user is already logged in, redirect to dashboard
     if request.user.is_authenticated:
-        return redirect('/dashboard/')
-    return render(request, 'landing.html')
+        return redirect('dashboard')
+    
+    # Get real-time stats
+    from django.db.models import Count
+    from students.models import Students
+    from academic.models import Teacher, Classroom
+    from .models import School
+    
+    total_schools = School.objects.filter(is_active=True).count()
+    total_students = Students.objects.filter(is_active=True).count()
+    total_teachers = Teacher.objects.count()
+    
+    context = {
+        'total_schools': total_schools,
+        'total_students': total_students,
+        'total_teachers': total_teachers,
+    }
+    
+    return render(request, 'accounts/landing.html', context)
 
 @login_required
 def subscription_dashboard(request):
@@ -54,7 +91,7 @@ def subscription_dashboard(request):
     if subscription.status == 'PENDING':
         status_msg = {
             'type': 'warning',
-            'title': '⏳ Awaiting First Payment',
+            'title': ' Awaiting First Payment',
             'message': f'Please pay KES {subscription.get_current_fee():,.0f} to activate your subscription.',
         }
     elif subscription.status == 'ACTIVE':
@@ -67,19 +104,19 @@ def subscription_dashboard(request):
         else:
             status_msg = {
                 'type': 'success',
-                'title': '✅ Subscription Active',
+                'title': ' Subscription Active',
                 'message': f'Next billing: {subscription.next_billing_date.strftime("%d/%m/%Y") if subscription.next_billing_date else "Not set"}',
             }
     elif subscription.status == 'OVERDUE':
         status_msg = {
             'type': 'danger',
-            'title': '❌ Payment Overdue',
+            'title': ' Payment Overdue',
             'message': 'Your subscription payment is overdue. Please pay immediately.',
         }
     else:
         status_msg = {
             'type': 'critical',
-            'title': '🚫 Subscription Suspended',
+            'title': ' Subscription Suspended',
             'message': 'Your subscription has been suspended. Please contact support.',
         }
     
@@ -212,7 +249,7 @@ def subscription_mpesa_callback(request):
                     fee_breakdown={'billing_cycle': payment.billing_cycle},
                 )
                 
-                print(f"✅ Subscription payment completed for {payment.school.name}")
+                print(f" Subscription payment completed for {payment.school.name}")
         
         return JsonResponse({"ResultCode": 0, "ResultDesc": "Success"})
         
@@ -319,7 +356,7 @@ def confirm_subscription_payment(request, school_id):
         Notification.objects.create(
             sender=request.user,
             recipient=admin,
-            title="✅ Subscription Activated",
+            title="Subscription Activated",
             message=f"Your subscription payment has been confirmed. Your school is now active until {subscription.current_period_end.strftime('%d %b %Y')}.",
             notification_type='FEE'
         )
@@ -416,18 +453,18 @@ def test_mpesa_connection(request):
         if response.status_code == 200:
             config.is_configured = True
             config.last_tested = timezone.now()
-            config.test_response = "✅ Connection successful!"
+            config.test_response = " Connection successful!"
             config.save()
             return JsonResponse({'success': True, 'message': 'Connection successful! Your M-Pesa is ready.'})
         else:
             config.is_configured = False
-            config.test_response = f"❌ Error: {response.status_code}"
+            config.test_response = f" Error: {response.status_code}"
             config.save()
             return JsonResponse({'success': False, 'message': f'Invalid credentials. Error: {response.status_code}'})
             
     except Exception as e:
         config.is_configured = False
-        config.test_response = f"❌ Error: {str(e)}"
+        config.test_response = f" Error: {str(e)}"
         config.save()
         return JsonResponse({'success': False, 'message': f'Connection failed: {str(e)}'})
 
@@ -958,6 +995,148 @@ def logout_view(request):
     messages.success(request, "You have been successfully logged out.")
     
     return redirect('login')
+
+
+
+@login_required
+def profile_view(request):
+    """Universal profile page for all users"""
+    user = request.user
+    
+    context = {'user': user}
+    
+    # ===== SUPER ADMIN =====
+    if user.role == 'SUPER_ADMIN':
+        from students.models import Students
+        from academic.models import Teacher, Classroom
+        from .models import School, SubscriptionPayment
+        from django.db.models import Sum
+        
+        schools = School.objects.all()
+        for school in schools:
+            school.student_count = Students.objects.filter(school=school).count()
+            school.teacher_count = Teacher.objects.filter(school=school).count()
+            school.payment_total = SubscriptionPayment.objects.filter(
+                school=school, status='COMPLETED'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        context.update({
+            'total_schools': schools.count(),
+            'total_students': Students.objects.count(),
+            'total_teachers': Teacher.objects.count(),
+            'total_revenue': SubscriptionPayment.objects.filter(status='COMPLETED').aggregate(total=Sum('amount'))['total'] or 0,
+            'schools': schools,
+        })
+    
+    # ===== ADMIN =====
+    elif user.role == 'ADMIN':
+        from students.models import Students
+        from academic.models import Teacher, Classroom
+        from finance.models import Payement
+        from django.db.models import Sum
+        
+        school = user.school
+        context.update({
+            'student_count': Students.objects.filter(school=school).count(),
+            'teacher_count': Teacher.objects.filter(school=school).count(),
+            'class_count': Classroom.objects.filter(school=school).count(),
+            'revenue': Payement.objects.filter(school=school).aggregate(total=Sum('amount_paid'))['total'] or 0,
+            'recent_students': Students.objects.filter(school=school).order_by('-id')[:5],
+        })
+    
+    # ===== HEAD TEACHER =====
+    elif user.role == 'HEAD_TEACHER':
+        from students.models import Students, Attendance
+        from academic.models import Teacher, Classroom, Results
+        from django.utils import timezone
+        
+        school = user.school
+        today = timezone.now().date()
+        today_attendance = Attendance.objects.filter(student__school=school, date=today)
+        present_today = today_attendance.filter(status='Present').count()
+        
+        context.update({
+            'student_count': Students.objects.filter(school=school, is_active=True).count(),
+            'teacher_count': Teacher.objects.filter(school=school).count(),
+            'class_count': Classroom.objects.filter(school=school).count(),
+            'attendance_percentage': round((present_today / today_attendance.count() * 100), 1) if today_attendance.count() > 0 else 0,
+            'pending_results': Results.objects.filter(school=school, status='PENDING').count(),
+            'recent_students': Students.objects.filter(school=school).order_by('-id')[:5],
+        })
+    
+    # ===== TEACHER =====
+    elif user.role == 'TEACHER':
+        from academic.models import Teacher as TeacherModel, SubjectAllocation, Classroom, Subject, Results
+        from students.models import Students
+        from django.db.models import Avg
+        
+        try:
+            teacher = TeacherModel.objects.get(user=user)
+            
+            # Get classes
+            assigned_classroom_ids = SubjectAllocation.objects.filter(
+                teacher=teacher
+            ).values_list('classroom_id', flat=True).distinct()
+            class_teacher_ids = Classroom.objects.filter(class_teacher=user).values_list('id', flat=True)
+            all_classroom_ids = set(assigned_classroom_ids) | set(class_teacher_ids)
+            my_classes = Classroom.objects.filter(id__in=all_classroom_ids)
+            
+            # Get subjects
+            subjects_taught = Subject.objects.filter(allocations__teacher=teacher).distinct()
+            
+            # Subject performance
+            subject_performance = []
+            for subject in subjects_taught:
+                avg_data = Results.objects.filter(subject=subject).aggregate(Avg('marks_obtained'))
+                subject_performance.append({
+                    'name': subject.name,
+                    'avg': round(avg_data.get('marks_obtained__avg') or 0, 1)
+                })
+            
+            context.update({
+                'my_classes': my_classes.count(),
+                'my_students': Students.objects.filter(current_class__in=my_classes).count(),
+                'my_subjects': subjects_taught.count(),
+                'pending_results': 0,
+                'subject_performance': subject_performance,
+            })
+        except TeacherModel.DoesNotExist:
+            context.update({
+                'my_classes': 0,
+                'my_students': 0,
+                'my_subjects': 0,
+                'pending_results': 0,
+                'subject_performance': [],
+            })
+    
+    # ===== STUDENT =====
+    elif user.role == 'STUDENT':
+        student = user.student_record_records if hasattr(user, 'student_record_records') else None
+        if student:
+            total_days = student.attendances.count()
+            present_days = student.attendances.filter(status='Present').count()
+            context.update({
+                'student': student,
+                'attendance_percent': round((present_days / total_days * 100) if total_days > 0 else 0),
+                'fee_balance': student.get_fee_balance(),
+            })
+    
+    # ===== PARENT =====
+    elif user.role == 'PARENT':
+        from students.models import Students
+        
+        children = Students.objects.filter(parents=user)
+        total_balance = sum(child.get_fee_balance() for child in children)
+        total_results = sum(child.results.count() for child in children)
+        
+        context.update({
+            'children': children,
+            'children_results': total_results,
+            'children_attendance': 0,  # You can calculate this
+            'total_fee_balance': total_balance,
+        })
+    
+    return render(request, 'profile.html', context)
 # ========== SUPER ADMIN SCHOOL MANAGEMENT ==========
 
 @login_required
@@ -1302,9 +1481,8 @@ def register_head_teacher(request):
         
         tsc_number = tsc_number.strip().upper()
         
-        # Debug: Print to terminal
-        print(f"Attempting to register Head Teacher: {f_name} {l_name}")
-        print(f"Request user role: {request.user.role}")
+       
+       
         
         # Check if user already exists
         if User.objects.filter(username=tsc_number).exists():

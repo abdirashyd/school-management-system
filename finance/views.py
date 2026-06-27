@@ -425,3 +425,126 @@ def delete_pending_payment(request, payment_id):
     return JsonResponse({'status': 'already_confirmed'})
 
 
+@login_required
+def finance_dashboard(request):
+    """Unified finance dashboard for Super Admin and School Admin"""
+    user = request.user
+    
+    # ===== SUPER ADMIN =====
+    if user.role == 'SUPER_ADMIN':
+        from accounts.models import School, SubscriptionPayment
+        from students.models import Students
+        from academic.models import Teacher
+        from django.db.models import Sum
+        
+        schools = School.objects.all()
+        school_data = []
+        total_revenue = 0
+        pending_payments = []
+        overdue_schools = 0
+        
+        for school in schools:
+            revenue = SubscriptionPayment.objects.filter(
+                school=school,
+                status='COMPLETED'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            total_revenue += revenue
+            
+            student_count = Students.objects.filter(school=school).count()
+            
+            school_data.append({
+                'name': school.name,
+                'id': school.id,
+                'student_count': student_count,
+                'revenue': revenue,
+                'subscription': school.subscription,
+            })
+            
+            if school.subscription.status == 'OVERDUE':
+                overdue_schools += 1
+        
+        pending_payments = SubscriptionPayment.objects.filter(
+            status='PENDING'
+        ).select_related('school', 'subscription')
+        
+        context = {
+            'total_revenue': total_revenue,
+            'active_schools': School.objects.filter(is_active=True).count(),
+            'pending_payments': pending_payments.count(),
+            'overdue_schools': overdue_schools,
+            'schools': school_data,
+            'pending_payment_list': pending_payments,
+        }
+        return render(request, 'finance/finance_dashboard.html', context)
+    
+    # ===== SCHOOL ADMIN =====
+    elif user.role == 'ADMIN':
+        from students.models import Students
+        from academic.models import Classroom
+        from finance.models import Payement
+        from django.db.models import Sum
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        school = user.school
+        
+        # Total revenue
+        total_revenue = Payement.objects.filter(
+            school=school
+        ).aggregate(total=Sum('amount_paid'))['total'] or 0
+        
+        # This month
+        today = timezone.now()
+        start_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_revenue = Payement.objects.filter(
+            school=school,
+            date_paid__gte=start_of_month
+        ).aggregate(total=Sum('amount_paid'))['total'] or 0
+        
+        # Students
+        total_students = Students.objects.filter(school=school).count()
+        
+        # Fee per student (get from school settings or default)
+        fee_per_student = getattr(school, 'fee_per_student', 5000)
+        
+        # Revenue by class
+        classrooms = Classroom.objects.filter(school=school)
+        class_revenue = []
+        for classroom in classrooms:
+            students = Students.objects.filter(school=school, current_class=classroom)
+            student_count = students.count()
+            expected = student_count * fee_per_student
+            collected = Payement.objects.filter(
+                school=school,
+                student__in=students
+            ).aggregate(total=Sum('amount_paid'))['total'] or 0
+            pending = expected - collected
+            percentage = round((collected / expected * 100), 1) if expected > 0 else 0
+            
+            class_revenue.append({
+                'classroom': classroom,
+                'student_count': student_count,
+                'expected': expected,
+                'collected': collected,
+                'pending': pending,
+                'percentage': percentage,
+            })
+        
+        # Recent payments
+        recent_payments = Payement.objects.filter(
+            school=school
+        ).order_by('-date_paid')[:5]
+        
+        context = {
+            'total_revenue': total_revenue,
+            'total_students': total_students,
+            'monthly_revenue': monthly_revenue,
+            'fee_per_student': fee_per_student,
+            'class_revenue': class_revenue,
+            'recent_payments': recent_payments,
+        }
+        return render(request, 'finance/finance_dashboard.html', context)
+    
+    else:
+        messages.error(request, "You don't have permission to view this page.")
+        return redirect('dashboard')

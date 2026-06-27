@@ -4,8 +4,8 @@
     "description": "Complete school management system",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#10b981",
+    "background_color": "background: linear-gradient(135deg, #2563eb, #10b981);",
+    "theme_color": "#0f172a",
     "orientation": "any",
     "scope": "/",
     "icons": [

@@ -16,11 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from accounts.views import landing_page
 from django.views.generic import TemplateView
 
 urlpatterns = [
-    path('', landing_page, name='landing'),
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')), 
     path('',include('academic.urls')),
@@ -29,5 +27,5 @@ urlpatterns = [
     path('notifications/', include('notification.urls')),
     path('', include('pwa.urls')),
     path('serviceworker.js', TemplateView.as_view(template_name='serviceworker.js', content_type='application/javascript'), name='serviceworker'),
-  
+    path("__reload__/", include("django_browser_reload.urls")),
 ]

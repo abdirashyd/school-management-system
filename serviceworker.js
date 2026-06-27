@@ -1,5 +1,5 @@
 // Service Worker for EduNexus PWA
-const CACHE_NAME = 'edunexus-v8';
+const CACHE_NAME = 'edunexus-v9';
 
 // Files to cache (only those that definitely exist)
 const FILES_TO_CACHE = [

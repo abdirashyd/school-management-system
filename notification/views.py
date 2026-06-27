@@ -16,7 +16,7 @@ def send_notification(request):
     user = request.user
     
     # Allow SUPER_ADMIN, ADMIN, and TEACHER
-    if user.role not in ['SUPER_ADMIN', 'ADMIN', 'TEACHER']:
+    if user.role not in ['SUPER_ADMIN', 'ADMIN','HEAD_TEACHER', 'TEACHER']:
         messages.error(request, "You don't have permission to send notifications.")
         return redirect('dashboard')
     
@@ -69,6 +69,23 @@ def send_notification(request):
                         
                     elif notification_type == 'ALL':
                         recipients_list = User.objects.filter(is_active=True, school=school)
+                        
+                    elif notification_type == 'TEACHER':
+                        recipients_list = User.objects.filter(role='TEACHER', school=school)
+                        
+                    elif notification_type == 'PARENT':
+                        recipients_list = User.objects.filter(role='PARENT', school=school)
+                        
+                    elif notification_type == 'STUDENT':
+                        recipients_list = User.objects.filter(role='STUDENT', school=school)
+                
+                elif user.role == 'HEAD_TEACHER':
+                    school = user.school
+                    
+                    if notification_type == 'CLASS' and target_class_id:
+                        target_class = Classroom.objects.get(id=target_class_id, school=school)
+                        students = Students.objects.filter(current_class=target_class, school=school)
+                        recipients_list = [student.user for student in students]
                         
                     elif notification_type == 'TEACHER':
                         recipients_list = User.objects.filter(role='TEACHER', school=school)

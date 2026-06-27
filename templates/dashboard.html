@@ -27,9 +27,18 @@
         <div class="stat-header"><span>Total Teachers</span><i class="fas fa-chalkboard-user"></i></div>
         <div class="stat-number">{{ total_teachers|default:"0" }}</div>
     </div>
-    <div class="stat-card">
-        <div class="stat-header"><span>Total Revenue</span><i class="fas fa-coins"></i></div>
-        <div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+        <a href="{% url 'finance_dashboard' %}" class="stat-card-link" style="text-decoration: none; display: block;">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span>Total Revenue</span>
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+                <div style="font-size: 0.65rem; color: #2563eb; margin-top: 0.3rem;">
+                    Click to view details →
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 
@@ -146,7 +155,19 @@
     <div class="stat-card"><div class="stat-header"><span>Students</span><i class="fas fa-user-graduate"></i></div><div class="stat-number">{{ total_students|default:"0" }}</div></div>
     <div class="stat-card"><div class="stat-header"><span>Teachers</span><i class="fas fa-chalkboard-user"></i></div><div class="stat-number">{{ total_teachers|default:"0" }}</div></div>
     <div class="stat-card"><div class="stat-header"><span>Classes</span><i class="fas fa-building"></i></div><div class="stat-number">{{ total_classes|default:"0" }}</div></div>
-    <div class="stat-card"><div class="stat-header"><span>Revenue</span><i class="fas fa-coins"></i></div><div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div></div>
+    <!-- Total Revenue Card with Link -->
+<a href="{% url 'finance_dashboard' %}" class="stat-card-link" style="text-decoration: none; display: block;">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span>Total Revenue</span>
+            <i class="fas fa-coins"></i>
+        </div>
+        <div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+        <div style="font-size: 0.65rem; color: #2563eb; margin-top: 0.3rem;">
+            Click to view details →
+        </div>
+    </div>
+</a>
 </div>
 
 <div class="two-columns">

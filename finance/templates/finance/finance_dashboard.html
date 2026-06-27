@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Finance Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>💰 Finance Dashboard</h1>
+    <p>
+        {% if user.role == 'SUPER_ADMIN' %}
+            Overview of all school subscription revenue
+        {% else %}
+            Manage school fees and track revenue
+        {% endif %}
+    </p>
+</div>
+
+<!-- ===== STATS CARDS ===== -->
+<div class="stats-grid">
+    {% if user.role == 'SUPER_ADMIN' %}
+        <!-- Super Admin Stats -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Total Revenue</span>
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Active Schools</span>
+                <i class="fas fa-school"></i>
+            </div>
+            <div class="stat-number">{{ active_schools|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Pending Payments</span>
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-number">{{ pending_payments|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Overdue</span>
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-number">{{ overdue_schools|default:"0" }}</div>
+        </div>
+
+    {% else %}
+        <!-- School Admin Stats -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Total Revenue</span>
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-number">KES {{ total_revenue|floatformat:0|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Students</span>
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-number">{{ total_students|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>This Month</span>
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stat-number">KES {{ monthly_revenue|floatformat:0|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span>Fee Per Student</span>
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stat-number">KES {{ fee_per_student|floatformat:0|default:"0" }}</div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ============================================ -->
+<!-- SUPER ADMIN - Revenue by School -->
+<!-- ============================================ -->
+{% if user.role == 'SUPER_ADMIN' %}
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-bar"></i> Revenue by School</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>School Name</th>
+                    <th>Students</th>
+                    <th>Subscription Plan</th>
+                    <th>Total Revenue</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for school in schools %}
+                <tr>
+                    <td><strong>{{ school.name }}</strong></td>
+                    <td>{{ school.student_count|default:"0" }}</td>
+                    <td>{{ school.subscription.billing_cycle|title }}</td>
+                    <td><strong>KES {{ school.revenue|floatformat:0|default:"0" }}</strong></td>
+                    <td>
+                        {% if school.subscription.status == 'ACTIVE' %}
+                            <span class="status-badge status-success">✅ Active</span>
+                        {% elif school.subscription.status == 'PENDING' %}
+                            <span class="status-badge status-warning">⏳ Pending</span>
+                        {% else %}
+                            <span class="status-badge status-danger">❌ {{ school.subscription.status|title }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'super_admin_school_detail' school.id %}" class="btn-view">View</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state">No schools found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SCHOOL ADMIN - Fee Settings & Revenue -->
+<!-- ============================================ -->
+{% else %}
+
+<!-- ===== FEE SETTINGS ===== -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-cog"></i> Fee Settings</h3>
+    </div>
+    <form method="POST" action="{% url 'update_fee_settings' %}">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group">
+                <label>Monthly Fee per Student (KES)</label>
+                <input type="number" name="fee_per_student" value="{{ fee_per_student|floatformat:0|default:'5000' }}" class="form-control" min="0" step="100">
+                <small>This fee will be applied to all students</small>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn-primary">Save Fee Settings</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ===== REVENUE BY CLASS ===== -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-bar"></i> Revenue by Class</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Students</th>
+                    <th>Expected Monthly</th>
+                    <th>Collected</th>
+                    <th>Pending</th>
+                    <th>Collection Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for class_data in class_revenue %}
+                <tr>
+                    <td><strong>{{ class_data.classroom.name }}</strong></td>
+                    <td>{{ class_data.student_count }}</td>
+                    <td>KES {{ class_data.expected|floatformat:0 }}</td>
+                    <td><strong>KES {{ class_data.collected|floatformat:0 }}</strong></td>
+                    <td>KES {{ class_data.pending|floatformat:0 }}</td>
+                    <td>
+                        <div class="progress-bar" style="width: 100px; display: inline-block;">
+                            <div class="progress-fill" style="width: {{ class_data.percentage }}%;"></div>
+                        </div>
+                        <span style="font-size: 0.7rem; margin-left: 0.5rem;">{{ class_data.percentage }}%</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="empty-state">No classes found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ===== RECENT PAYMENTS ===== -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-history"></i> Recent Payments</h3>
+        <a href="{% url 'payement_detail' %}" class="view-all">View All →</a>
+    </div>
+    <div class="student-list">
+        {% for payment in recent_payments %}
+        <div class="student-item">
+            <div class="student-info">
+                <h4>{{ payment.student.first_name }} {{ payment.student.last_name }}</h4>
+                <p>{{ payment.reference }} • {{ payment.date_paid|date:"d M Y" }}</p>
+            </div>
+            <div class="student-score">
+                <div class="score">KES {{ payment.amount_paid|floatformat:0 }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="empty-message">No payments recorded yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ============================================ -->
+<!-- SHARED - Pending Payments (Super Admin) -->
+<!-- ============================================ -->
+{% if user.role == 'SUPER_ADMIN' and pending_payment_list %}
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h3><i class="fas fa-clock"></i> Pending Subscription Payments</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>School</th>
+                    <th>Amount</th>
+                    <th>Plan</th>
+                    <th>Requested</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in pending_payment_list %}
+                <tr>
+                    <td><strong>{{ payment.school.name }}</strong></td>
+                    <td>KES {{ payment.amount|floatformat:0 }}</td>
+                    <td>{{ payment.billing_cycle|title }}</td>
+                    <td>{{ payment.created_at|date:"d M Y" }}</td>
+                    <td>
+                        <a href="{% url 'confirm_subscription_payment' payment.school.id %}" class="btn-success btn-sm" onclick="return confirm('Confirm payment for {{ payment.school.name }}?')">
+                            Confirm
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="empty-state">No pending payments.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

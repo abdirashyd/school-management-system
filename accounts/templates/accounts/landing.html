@@ -1,0 +1,970 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>EduNexus | Smart School Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <style>
+        /* ============================================
+           SECTION 1: RESET & BASE VARIABLES
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --gray-light: #f1f5f9;
+            --white: #ffffff;
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f9ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        /* ============================================
+           SECTION 2: MAIN CONTAINER (2 DIVS ONLY)
+           ============================================ */
+        .split-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            background: transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ============================================
+           DIV 1: GREEN CARD (LEFT)
+           ============================================ */
+        .card-green {
+            flex: 0 0 42%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e293b 0%, #2563eb 50%, #10b981 100%);
+            padding: 3.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Decorative circles */
+        .card-green::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .card-green::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            color: var(--white);
+        }
+
+        .brand-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .brand-name {
+            font-size: 2.8rem;
+            font-weight: 800;
+            font-family: "IBM Plex Sans", sans-serif;
+            margin-bottom: 0.5rem;
+        }
+
+        .brand-tagline {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .brand-features {
+            list-style: none;
+        }
+
+        .brand-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .brand-features li i {
+            color: #34d399;
+            font-size: 1rem;
+        }
+
+        /* ============================================
+           DIV 2: WHITE CARD (RIGHT) - OVERLAPPING WITH S-CURVE
+           ============================================ */
+        .card-white {
+            flex: 1;
+            height: 100%;
+            background: var(--white);
+            padding: 3.5rem 3.5rem;
+            margin-left: -40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            box-shadow: var(--shadow-lg);
+            border-radius: 0 30px 30px 0;
+            overflow: hidden;
+        }
+
+        .card-white .content {
+            max-width: 420px;
+            width: 100%;
+            margin-left: 30px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .welcome-text {
+            margin-bottom: 2.5rem;
+        }
+
+        .welcome-text h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--dark);
+            font-family: "IBM Plex Sans", sans-serif;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-text h1 span {
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .welcome-text p {
+            color: var(--gray);
+            font-size: 0.95rem;
+        }
+
+        /* ============================================
+           WAVE LAYERS - BEHIND CONTENT
+           ============================================ */
+        .wave-layer-1 {
+            height: 500px;
+            width: 500px;
+            background: linear-gradient(135deg, rgba(4, 62, 186, 0.08), rgba(0, 194, 129, 0.05));
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(40px);
+            -webkit-filter: blur(40px);
+            opacity: 0.6;
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 30%, transparent 100%);
+            mask-image: linear-gradient(to right, black 30%, transparent 100%);
+        }
+
+        .wave-layer-2 {
+            height: 400px;
+            width: 400px;
+            background: linear-gradient(135deg, rgba(0, 194, 129, 0.06), rgba(4, 62, 186, 0.04));
+            position: absolute;
+            right: -60px;
+            bottom: -60px;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(30px);
+            -webkit-filter: blur(30px);
+            opacity: 0.4;
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to left, black 30%, transparent 100%);
+            mask-image: linear-gradient(to left, black 30%, transparent 100%);
+        }
+
+        .wave-layer-3 {
+            height: 300px;
+            width: 300px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.04), rgba(37, 99, 235, 0.03));
+            position: absolute;
+            top: 50%;
+            right: -40px;
+            transform: translateY(-50%);
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(50px);
+            -webkit-filter: blur(50px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            color: var(--white);
+            padding: 1rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background: transparent;
+            color: var(--dark);
+            padding: 1rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-secondary:hover {
+            border-color: #2563eb;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-download {
+            border-color: #2563eb;
+            color: #2563eb;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .btn-download:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-download.pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+            }
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 0 20px 5px rgba(37, 99, 235, 0.2);
+            }
+        }
+
+        .btn-download.installed {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+            animation: none;
+        }
+
+        .btn-download .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .btn-download.loading .spinner {
+            display: inline-block;
+        }
+
+        .btn-download.loading .btn-text {
+            visibility: hidden;
+        }
+
+        .btn-download.loading .btn-icon {
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media all and (display-mode: standalone) {
+            .btn-download {
+                display: none !important;
+            }
+        }
+
+        /* ===== STATS ===== */
+        .stats-row {
+            display: flex;
+            gap: 2.5rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .number {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .stat-item .label {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .footer-text {
+            margin-top: 1.5rem;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .footer-text i {
+            color: #ef4444;
+        }
+
+
+        /* ============================================
+           TABLET STYLES (769px - 1023px)
+           ============================================ */
+        @media (min-width: 769px) and (max-width: 1023px) {
+            .card-green {
+                flex: 0 0 45%;
+                padding: 2.5rem 2rem;
+            }
+
+            .brand-name {
+                font-size: 2.2rem;
+            }
+
+            .brand-tagline {
+                font-size: 0.95rem;
+            }
+
+            .brand-features li {
+                font-size: 0.85rem;
+            }
+
+            .card-white {
+                padding: 2.5rem 2.5rem;
+                margin-left: -30px;
+                border-radius: 0 25px 25px 0;
+            }
+
+            .card-white .content {
+                max-width: 380px;
+                margin-left: 15px;
+            }
+
+            .welcome-text h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats-row {
+                gap: 1.5rem;
+            }
+
+.wave-layer-1{
+            height: 300px;
+            width:300px;
+             background: linear-gradient(135deg, rgba(4, 62, 186), rgba(0, 194, 129));
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+            border-radius: 50% ;
+            filter: blur(40px);
+        -webkit-filter: blur(40px); /* Safari support */
+        
+        /* Optional: Add opacity for softer effect */
+        opacity: 0.6;
+        
+        /* Prevent interaction */
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+     }
+        .wave-layer-2{
+            height: 400px;
+            width:400px;
+            background: linear-gradient(135deg,  rgba(0, 194, 129),rgba(4, 62, 186));
+            position: absolute;
+            right: -10%;
+            bottom: -10%;
+           border-radius:50%;
+           filter: blur(20px);
+            -webkit-filter: blur(30px); /* Safari support */
+            
+            /* Optional: Add opacity for softer effect */
+            opacity: 0.4;
+            
+            /* Prevent interaction */
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        }
+            .wave-layer-3 {
+                height: 250px;
+                width: 250px;
+                right: -30px;
+            }
+        }
+
+
+        /* ============================================
+           MOBILE STYLES (768px and below)
+           ============================================ */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                background: var(--white);
+                overflow: hidden;
+            }
+
+            .split-container {
+                flex-direction: column;
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                background: transparent;
+            }
+
+            /* Hide green card on mobile */
+            .card-green {
+                display: none;
+            }
+
+            /* Wave layers on mobile */
+            .wave-layer-1{
+            height: 300px;
+            width:300px;
+             background: linear-gradient(135deg, rgba(4, 62, 186), rgba(0, 194, 129));
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+            border-radius: 50% ;
+            filter: blur(40px);
+        -webkit-filter: blur(40px); /* Safari support */
+        
+        /* Optional: Add opacity for softer effect */
+        opacity: 0.6;
+        
+        /* Prevent interaction */
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+     }
+        .wave-layer-2{
+            height: 400px;
+            width:400px;
+            background: linear-gradient(135deg,  rgba(0, 194, 129),rgba(4, 62, 186));
+            position: absolute;
+            right: -10%;
+            bottom: -10%;
+           border-radius:50%;
+           filter: blur(20px);
+            -webkit-filter: blur(30px); /* Safari support */
+            
+            /* Optional: Add opacity for softer effect */
+            opacity: 0.4;
+            
+            /* Prevent interaction */
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        }
+
+            .wave-layer-3 {
+                height: 250px;
+                width: 250px;
+                right: -30px;
+                filter: blur(50px);
+                opacity: 0.2;
+            }
+
+            .card-white {
+                height: 100%;
+                width: 100%;
+                background: var(--white);
+                padding: 2rem 1.5rem;
+                margin-left: 0;
+                box-shadow: none;
+                z-index: 2;
+                display: flex;
+                border-radius: 0 !important;
+                flex-direction: column;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .card-white .content {
+                max-width: 100%;
+                margin-left: 0;
+                width: 100%;
+                position: relative;
+                z-index: 2;
+            }
+
+            .welcome-text {
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+
+            .welcome-text h1 {
+                font-size: 1.8rem;
+                color: var(--dark);
+                margin-left: 0;
+            }
+
+            .welcome-text p {
+                font-size: 0.85rem;
+                display: block;
+            }
+
+            .btn-group {
+                gap: 0.75rem;
+                align-items: center;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                padding: 0.9rem;
+                font-size: 0.95rem;
+                min-height: 50px;
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .stats-row {
+                justify-content: center;
+                gap: 1.5rem;
+                margin-top: 1.5rem;
+                padding-top: 1rem;
+            }
+
+            .stat-item .number {
+                font-size: 1.1rem;
+            }
+
+            .footer-text {
+                margin-top: 1rem;
+                font-size: 0.65rem;
+            }
+        }
+
+
+        /* ============================================
+           EXTRA SMALL MOBILE (480px and below)
+           ============================================ */
+        @media (max-width: 480px) {
+            .card-white {
+                padding: 1.5rem 1rem;
+            }
+
+            .welcome-text h1 {
+                font-size: 1.5rem;
+            }
+
+            .welcome-text p {
+                font-size: 0.75rem;
+            }
+            
+            .btn-primary,
+            .btn-secondary {
+                padding: 0.8rem;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .stats-row {
+                gap: 1rem;
+                margin-top: 1rem;
+                padding-top: 0.75rem;
+            }
+
+            .stat-item .number {
+                font-size: 0.95rem;
+            }
+
+            .stat-item .label {
+                font-size: 0.55rem;
+            }
+
+            .footer-text {
+                font-size: 0.55rem;
+                margin-top: 0.75rem;
+            }
+
+            .wave-layer-1 {
+                height: 200px;
+                width: 200px;
+                top: -30px;
+                left: -30px;
+                filter: blur(30px);
+            }
+
+            .wave-layer-2 {
+                height: 250px;
+                width: 250px;
+                right: -30px;
+                bottom: -30px;
+                filter: blur(20px);
+            }
+
+            .wave-layer-3 {
+                height: 150px;
+                width: 150px;
+                right: -20px;
+                filter: blur(30px);
+            }
+        }
+
+
+        /* ============================================
+           IPHONE SE / SMALL ANDROID (380px and below)
+           ============================================ */
+        @media (max-width: 380px) {
+            .card-white {
+                padding: 1.2rem 0.8rem;
+            }
+
+            .welcome-text h1 {
+                font-size: 1.3rem;
+            }
+
+            .welcome-text p {
+                font-size: 0.65rem;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                padding: 0.7rem;
+                font-size: 0.8rem;
+                min-height: 40px;
+            }
+
+            .stats-row {
+                gap: 0.75rem;
+            }
+
+            .stat-item .number {
+                font-size: 0.85rem;
+            }
+
+            .stat-item .label {
+                font-size: 0.5rem;
+            }
+
+            .wave-layer-1 {
+                height: 150px;
+                width: 150px;
+                top: -20px;
+                left: -20px;
+                filter: blur(20px);
+            }
+
+            .wave-layer-2 {
+                height: 200px;
+                width: 200px;
+                right: -20px;
+                bottom: -20px;
+                filter: blur(15px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================
+         SPLIT CONTAINER - 2 DIVS ONLY
+         ============================================ -->
+    <div class="split-container">
+
+        <!-- ===== DIV 1: GREEN CARD (LEFT / TOP) ===== -->
+        <div class="card-green">
+            <div class="brand-content">
+                <span class="brand-icon"><i class="fas fa-graduation-cap"></i></span>
+                <div class="brand-name">EduNexus</div>
+                <div class="brand-tagline">Smart School Management System</div>
+                <ul class="brand-features">
+                    <li><i class="fas fa-check-circle"></i> Track student performance</li>
+                    <li><i class="fas fa-check-circle"></i> Manage fees & payments</li>
+                    <li><i class="fas fa-check-circle"></i> Real-time notifications</li>
+                    <li><i class="fas fa-check-circle"></i> Access anywhere, anytime</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ===== DIV 2: WHITE CARD (RIGHT / BOTTOM) WITH WAVES ===== -->
+        <div class="card-white">
+            
+            <!-- Wave Layers -->
+            <div class="wave-layer-1"></div>
+            <div class="wave-layer-2"></div>
+            <div class="wave-layer-3"></div>
+
+            <div class="content">
+
+                <div class="welcome-text">
+                    <h1>Welcome to <span>EduNexus</span></h1>
+                    <p>Choose an option to continue your journey</p>
+                </div>
+
+                <div class="btn-group">
+                    <a href="{% url 'login' %}" class="btn-primary">
+                        <i class="fas fa-arrow-right"></i> Sign In
+                    </a>
+                    <button class="btn-secondary btn-download pulse" id="downloadBtn">
+                        <i class="fas fa-download btn-icon"></i>
+                        <span class="btn-text">Install App</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="number">{{ total_schools|default:"1" }}</div>
+                        <div class="label">Schools</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="number">{{ total_students|default:"0" }}</div>
+                        <div class="label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="number">{{ total_teachers|default:"0" }}</div>
+                        <div class="label">Teachers</div>
+                    </div>
+                </div>
+
+                <div class="footer-text">
+                    <i class="fas fa-heart"></i> Made for education
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT - INSTANT ONE-CLICK INSTALLATION
+         ============================================ -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
+                    .then(reg => console.log('🚀 Service Worker active on landing page:', reg.scope))
+                    .catch(err => console.error('❌ Service Worker registration failed:', err));
+            });
+        }
+
+        // ============================================
+        // 1. CHECK IF USER IS LOGGED IN
+        // ============================================
+        (function() {
+            fetch('/api/check-auth/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_authenticated) {
+                        window.location.href = '/dashboard/';
+                    }
+                })
+                .catch(() => {
+                    console.log('Auth check skipped');
+                });
+        })();
+
+        // ============================================
+        // 2. INSTANT PWA INSTALLATION - ONE CLICK!
+        // ============================================
+        let deferredPrompt;
+        let isInstalled = false;
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            isInstalled = true;
+            if (downloadBtn) {
+                downloadBtn.style.display = 'none';
+            }
+        }
+
+        // Listen for install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('✅ PWA install ready');
+            
+            if (downloadBtn && !isInstalled) {
+                downloadBtn.style.display = 'inline-flex';
+                downloadBtn.classList.add('pulse');
+            }
+        });
+
+        // ============================================
+        // ONE CLICK = INSTALL! (No steps, no guides)
+        // ============================================
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                // Already installed?
+                if (isInstalled || window.matchMedia('(display-mode: standalone)').matches) {
+                    this.style.display = 'none';
+                    return;
+                }
+
+                // If we have the prompt - INSTALL NOW!
+                if (deferredPrompt) {
+                    // Show loading
+                    this.classList.add('loading');
+                    this.classList.remove('pulse');
+                    this.disabled = true;
+                    
+                    // TRIGGER INSTALL IMMEDIATELY
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        isInstalled = true;
+                        this.classList.remove('loading');
+                        this.classList.add('installed');
+                        this.innerHTML = '<i class="fas fa-check"></i> ✅ Installed!';
+                        setTimeout(() => {
+                            this.style.display = 'none';
+                        }, 2000);
+                    } else {
+                        this.classList.remove('loading');
+                        this.disabled = false;
+                        this.classList.add('pulse');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    // No prompt available
+                    try {
+                        if (window.navigator && window.navigator.standalone === false) {
+                            alert('📱 Tap the Share button and select "Add to Home Screen"');
+                        } else {
+                            alert('📲 Tap the menu (⋮) and select "Install App" or "Add to Home Screen"');
+                        }
+                    } catch (err) {
+                        alert('📲 To install: Tap the browser menu (⋮) → Install App');
+                    }
+                }
+            });
+        }
+
+        // Listen for successful installation
+        window.addEventListener('appinstalled', () => {
+            isInstalled = true;
+            const btn = document.getElementById('downloadBtn');
+            if (btn) {
+                btn.classList.remove('loading', 'pulse');
+                btn.classList.add('installed');
+                btn.innerHTML = '<i class="fas fa-check"></i> ✅ Installed!';
+                setTimeout(() => {
+                    btn.style.display = 'none';
+                }, 2000);
+            }
+            deferredPrompt = null;
+            console.log('App installed!');
+        });
+
+        console.log('Mode:', window.matchMedia('(display-mode: standalone)').matches ? 'PWA' : 'Browser');
+    </script>
+
+</body>
+</html>

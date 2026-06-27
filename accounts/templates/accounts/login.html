@@ -5,26 +5,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Login | EduNexus</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* ============================================
+           SECTION 1: RESET & BASE VARIABLES
+           ============================================ */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --gray-light: #f1f5f9;
+            --white: #ffffff;
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e8f5e9 100%);
             min-height: 100vh;
+            min-height: 100dvh;
+            background: #f0f9ff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
+            padding: 0 !important;
+            margin: 0;
+            overflow: hidden;
         }
 
-        /* Toast Container */
+        /* ============================================
+           SECTION 2: TOAST NOTIFICATIONS
+           ============================================ */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -106,38 +126,47 @@
             to { width: 0%; }
         }
 
-        /* Login Container */
+        /* ============================================
+           SECTION 3: MAIN CONTAINER - FULL SCREEN
+           ============================================ */
         .login-container {
             display: flex;
-            width: 100%;
-            max-width: 1200px;
-            background: white;
-            border-radius: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 100%;
+            max-height: 100%;
+            background: transparent;
+            position: relative;
         }
 
-        /* Left Side - Branding */
+        /* ============================================
+           SECTION 4: DIV 1 - GREEN CARD (LEFT)
+           ============================================ */
         .login-brand {
-            flex: 1;
-            background: linear-gradient(135deg, #2563eb 0%, #10b981 100%);
-            padding: 3rem;
+            flex: 0 0 42%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e293b 0%, #2563eb 50%, #10b981 100%);
+            padding: 3.5rem 3rem;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: center;
             position: relative;
+            z-index: 1;
             overflow: hidden;
+            box-shadow: var(--shadow-lg);
         }
 
         .login-brand::before {
             content: '';
             position: absolute;
             top: -30%;
-            right: -30%;
+            right: -20%;
             width: 300px;
             height: 300px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 50%;
+            pointer-events: none;
         }
 
         .login-brand::after {
@@ -147,34 +176,36 @@
             left: -20%;
             width: 200px;
             height: 200px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             border-radius: 50%;
+            pointer-events: none;
         }
 
         .brand-content {
             position: relative;
             z-index: 1;
+            color: var(--white);
         }
 
         .brand-logo {
-            font-size: 2rem;
+            font-size: 2.8rem;
             font-weight: 800;
-            color: white;
-            margin-bottom: 2rem;
+            font-family: "IBM Plex Sans", sans-serif;
+            margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .brand-logo i {
-            font-size: 2rem;
+            font-size: 2.8rem;
         }
 
         .brand-title {
             font-size: 2.5rem;
             font-weight: 700;
             color: white;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             line-height: 1.2;
         }
 
@@ -187,7 +218,7 @@
 
         .brand-features {
             list-style: none;
-            margin-top: 2rem;
+            margin-top: 1.5rem;
         }
 
         .brand-features li {
@@ -195,77 +226,180 @@
             align-items: center;
             gap: 0.75rem;
             color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
         }
 
         .brand-features li i {
-            font-size: 1.1rem;
+            color: #34d399;
+            font-size: 1rem;
         }
 
-        .brand-footer {
-            position: relative;
-            z-index: 1;
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 2rem;
-        }
-
-        /* Right Side - Login Form */
+        /* ============================================
+           SECTION 5: DIV 2 - WHITE CARD (RIGHT) WITH WAVES
+           ============================================ */
         .login-form-side {
             flex: 1;
-            padding: 3rem;
-            background: white;
+            height: 100%;
+            background: var(--white);
+            padding: 3.5rem 3.5rem;
+            margin-left: -40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            z-index: 2;
+            box-shadow: var(--shadow-lg);
+            border-radius: 0 30px 30px 0;
+        }
+
+        /* ============================================
+           WAVE LAYERS - BEHIND CONTENT
+           ============================================ */
+        .wave-layer-1 {
+            height: 500px;
+            width: 500px;
+            background: linear-gradient(135deg, rgba(4, 62, 186, 0.08), rgba(0, 194, 129, 0.05));
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(40px);
+            -webkit-filter: blur(40px);
+            opacity: 0.6;
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 30%, transparent 100%);
+            mask-image: linear-gradient(to right, black 30%, transparent 100%);
+        }
+
+        .wave-layer-2 {
+            height: 400px;
+            width: 400px;
+            background: linear-gradient(135deg, rgba(0, 194, 129, 0.06), rgba(4, 62, 186, 0.04));
+            position: absolute;
+            right: -60px;
+            bottom: -60px;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(30px);
+            -webkit-filter: blur(30px);
+            opacity: 0.4;
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to left, black 30%, transparent 100%);
+            mask-image: linear-gradient(to left, black 30%, transparent 100%);
+        }
+
+        .wave-layer-3 {
+            height: 300px;
+            width: 300px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.04), rgba(37, 99, 235, 0.03));
+            position: absolute;
+            top: 50%;
+            right: -40px;
+            transform: translateY(-50%);
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(50px);
+            -webkit-filter: blur(50px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* ============================================
+           CONTENT - ON TOP OF WAVES
+           ============================================ */
+        .login-form-side .form-content {
+            max-width: 420px;
+            width: 100%;
+            margin-left: 30px;
+            position: relative;
+            z-index: 2;
         }
 
         .form-header {
-            text-align: center;
             margin-bottom: 2rem;
         }
 
         .form-header h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: "IBM Plex Sans", sans-serif;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .form-header h2 span {
             background: linear-gradient(135deg, #2563eb, #10b981);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            margin-bottom: 0.5rem;
         }
 
         .form-header p {
-            font-size: 0.85rem;
-            color: #6b7280;
+            font-size: 0.9rem;
+            color: var(--gray);
         }
 
+        /* ===== FORM FIELDS ===== */
         .input-group {
             margin-bottom: 1.25rem;
+            position: relative;
         }
 
         .input-group label {
             display: block;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray);
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group label .required {
+            color: #ef4444;
         }
 
         .input-group input {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border: 2px solid #e5e7eb;
-            border-radius: 16px;
-            font-size: 0.9rem;
+            padding: 0.6rem 0;
+            padding-right: 2.5rem;
+            border: none;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 1rem;
             font-family: 'Inter', sans-serif;
-            transition: all 0.3s;
-            background: #f9fafb;
+            background: transparent;
+            transition: all 0.3s ease;
+            color: var(--dark);
+            outline: none;
+            border-radius: 0;
+        }
+
+        .input-group input::placeholder {
+            color: #a0aec0;
+            font-weight: 300;
         }
 
         .input-group input:focus {
-            outline: none;
-            border-color: #2563eb;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            border-bottom-color: #2563eb;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .input-group .line-effect {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            transition: width 0.4s ease;
+        }
+
+        .input-group input:focus ~ .line-effect {
+            width: 100%;
         }
 
         .password-wrapper {
@@ -278,14 +412,19 @@
 
         .toggle-password {
             position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
+            right: 0;
+            bottom: 0.6rem;
             background: none;
             border: none;
             cursor: pointer;
-            color: #9ca3af;
+            color: #a0aec0;
             font-size: 1rem;
+            transition: color 0.3s;
+            padding: 0;
+        }
+
+        .toggle-password:hover {
+            color: #2563eb;
         }
 
         .login-options {
@@ -293,6 +432,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
+            margin-top: 0.5rem;
         }
 
         .remember-me {
@@ -315,19 +455,21 @@
             font-size: 0.8rem;
             color: #2563eb;
             text-decoration: none;
+            font-weight: 500;
         }
 
         .forgot-link:hover {
             text-decoration: underline;
         }
 
+        /* ===== LOGIN BUTTON ===== */
         .login-btn {
             width: 100%;
             background: linear-gradient(135deg, #2563eb, #10b981);
             color: white;
             border: none;
-            padding: 0.9rem;
-            border-radius: 16px;
+            padding: 1rem;
+            border-radius: 50px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
@@ -336,21 +478,61 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            position: relative;
+            min-height: 54px;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
         }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.4);
         }
 
-        .login-btn:active {
+        .login-btn:active:not(:disabled) {
             transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+
+        .login-btn.loading .btn-text {
+            visibility: hidden;
+        }
+
+        .login-btn.loading .btn-icon {
+            display: none;
+        }
+
+        .login-btn .spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .login-btn.loading .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
         .login-footer {
             text-align: center;
-            margin-top: 2rem;
-            padding-top: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
             border-top: 1px solid #e5e7eb;
         }
 
@@ -365,210 +547,658 @@
             font-weight: 500;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .login-container {
-                flex-direction: column;
-                max-width: 450px;
-            }
-            
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+
+        /* ============================================
+           SECTION 6: TABLET STYLES (769px - 1023px)
+           ============================================ */
+        @media (min-width: 769px) and (max-width: 1023px) {
             .login-brand {
-                padding: 2rem;
-                text-align: center;
+                flex: 0 0 45%;
+                padding: 2.5rem 2rem;
             }
-            
+
+            .brand-logo {
+                font-size: 2.2rem;
+            }
+
+            .brand-logo i {
+                font-size: 2.2rem;
+            }
+
             .brand-title {
-                font-size: 1.75rem;
+                font-size: 2rem;
             }
-            
-            .brand-features {
-                display: none;
+
+            .brand-subtitle {
+                font-size: 0.9rem;
             }
-            
+
+            .brand-features li {
+                font-size: 0.85rem;
+            }
+
             .login-form-side {
-                padding: 2rem;
+                padding: 2.5rem 2.5rem;
+                margin-left: -30px;
+                border-radius: 0 25px 25px 0;
+            }
+
+            .login-form-side .form-content {
+                max-width: 380px;
+                margin-left: 15px;
+            }
+
+            .form-header h2 {
+                font-size: 1.8rem;
+            }
+
+   .wave-layer-1{
+            height: 300px;
+            width:300px;
+             background: linear-gradient(135deg, rgba(4, 62, 186), rgba(0, 194, 129));
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+            border-radius: 50% ;
+            filter: blur(40px);
+        -webkit-filter: blur(40px); /* Safari support */
+        
+        /* Optional: Add opacity for softer effect */
+        opacity: 0.6;
+        
+        /* Prevent interaction */
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+     }
+        .wave-layer-2{
+            height: 400px;
+            width:400px;
+            background: linear-gradient(135deg,  rgba(0, 194, 129),rgba(4, 62, 186));
+            position: absolute;
+            right: -10%;
+            bottom: -10%;
+           border-radius:50%;
+           filter: blur(20px);
+            -webkit-filter: blur(30px); /* Safari support */
+            
+            /* Optional: Add opacity for softer effect */
+            opacity: 0.4;
+            
+            /* Prevent interaction */
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        }
+            .wave-layer-3 {
+                height: 250px;
+                width: 250px;
+                right: -30px;
             }
         }
 
-        @media (max-width: 480px) {
+
+        /* ============================================
+           SECTION 7: MOBILE STYLES (768px and below)
+           ============================================ */
+        @media (max-width: 768px) {
             body {
-                padding: 1rem;
+                padding: 0 !important;
+                background: var(--white);
+                overflow: hidden;
             }
+
+            .login-container {
+                flex-direction: column;
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                max-width: 100%;
+                max-height: 100%;
+                background: transparent;
+            }
+
+            /* ===== DIV 1: GREEN CARD (TOP) - HIDDEN ===== */
+            .login-brand {
+                display: none;
+            }
+
+            /* ===== WAVE LAYERS - MOBILE ===== */
+            .wave-layer-1{
+            height: 300px;
+            width:300px;
+             background: linear-gradient(135deg, rgba(4, 62, 186), rgba(0, 194, 129));
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+            border-radius: 50% ;
+            filter: blur(40px);
+        -webkit-filter: blur(40px); /* Safari support */
+        
+        /* Optional: Add opacity for softer effect */
+        opacity: 0.6;
+        
+        /* Prevent interaction */
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+     }
+        .wave-layer-2{
+            height: 400px;
+            width:400px;
+            background: linear-gradient(135deg,  rgba(0, 194, 129),rgba(4, 62, 186));
+            position: absolute;
+            right: -10%;
+            bottom: -10%;
+           border-radius:50%;
+           filter: blur(20px);
+            -webkit-filter: blur(30px); /* Safari support */
             
+            /* Optional: Add opacity for softer effect */
+            opacity: 0.4;
+            
+            /* Prevent interaction */
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        }
+
+            .wave-layer-3 {
+                height: 250px;
+                width: 250px;
+                right: -30px;
+                filter: blur(50px);
+                opacity: 0.2;
+            }
+
+            /* ===== DIV 2: WHITE CARD (BOTTOM) ===== */
             .login-form-side {
-                padding: 1.5rem;
+                width: 100%;
+                height: 100%;
+                min-height: 100vh;
+                min-height: 100dvh;
+                background: var(--white);
+                padding: 2rem 1.5rem;
+                margin-left: 0;
+                margin-top: 0;
+                box-shadow: none;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-radius: 0 !important;
+                position: relative;
+                overflow: hidden;
             }
-            
+
+            .login-form-side .form-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0 auto;
+                padding: 0 0.5rem;
+                position: relative;
+                z-index: 2;
+            }
+
+            .form-header {
+                text-align: center;
+                margin-bottom: 1.5rem;
+            }
+
             .form-header h2 {
-                font-size: 1.5rem;
+                font-size: 1.6rem;
+                color: var(--dark);
+                margin-bottom: 0.25rem;
+            }
+
+            .form-header p {
+                font-size: 0.8rem;
+                color: var(--gray);
+            }
+
+            .input-group {
+                margin-bottom: 1rem;
+            }
+
+            .input-group label {
+                font-size: 0.7rem;
+                margin-bottom: 0.25rem;
+            }
+
+            .input-group input {
+                padding: 0.5rem 0;
+                font-size: 0.95rem;
+            }
+
+            .toggle-password {
+                bottom: 0.5rem;
+            }
+
+            .login-options {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.25rem;
+                margin-top: 0.25rem;
+                font-size: 0.8rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .remember-me {
+                font-size: 0.8rem;
+            }
+
+            .forgot-link {
+                font-size: 0.8rem;
+            }
+
+            .login-btn {
+                padding: 0.85rem;
+                font-size: 0.95rem;
+                min-height: 48px;
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            .login-footer {
+                margin-top: 1.25rem;
+                padding-top: 1rem;
+                text-align: center;
+            }
+
+            .login-footer p {
+                font-size: 0.75rem;
+            }
+
+            /* Toast on mobile */
+            .toast-container {
+                top: 10px !important;
+                right: 10px !important;
+                left: 10px !important;
+            }
+
+            .toast {
+                max-width: none !important;
+                min-width: unset !important;
+                width: 100% !important;
+            }
+        }
+
+
+        /* ============================================
+           SECTION 8: EXTRA SMALL MOBILE (480px and below)
+           ============================================ */
+        @media (max-width: 480px) {
+            .login-form-side {
+                padding: 1.5rem 1rem;
+            }
+
+            .login-form-side .form-content {
+                padding: 0 0.25rem;
+            }
+
+            .form-header h2 {
+                font-size: 1.4rem;
+            }
+
+            .form-header p {
+                font-size: 0.75rem;
+            }
+
+            .input-group input {
+                font-size: 0.9rem;
+                padding: 0.4rem 0;
+            }
+
+            .login-btn {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .login-footer p {
+                font-size: 0.7rem;
+            }
+
+            .login-options {
+                font-size: 0.7rem;
+            }
+
+            .forgot-link {
+                font-size: 0.7rem;
+            }
+
+               .wave-layer-1{
+            height: 300px;
+            width:300px;
+             background: linear-gradient(135deg, rgba(4, 62, 186), rgba(0, 194, 129));
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            z-index: 0;
+            border-radius: 50% ;
+            filter: blur(40px);
+        -webkit-filter: blur(40px); /* Safari support */
+        
+        /* Optional: Add opacity for softer effect */
+        opacity: 0.6;
+        
+        /* Prevent interaction */
+        pointer-events: none;
+        -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+     }
+        .wave-layer-2{
+            height: 400px;
+            width:400px;
+            background: linear-gradient(135deg,  rgba(0, 194, 129),rgba(4, 62, 186));
+            position: absolute;
+            right: -10%;
+            bottom: -10%;
+           border-radius:50%;
+           filter: blur(20px);
+            -webkit-filter: blur(30px); /* Safari support */
+            
+            /* Optional: Add opacity for softer effect */
+            opacity: 0.4;
+            
+            /* Prevent interaction */
+            pointer-events: none;
+            -webkit-mask-image: linear-gradient(to right, black 0%, transparent 100%);
+    mask-image: linear-gradient(to right, black 0%, transparent 100%);
+        }
+
+            .wave-layer-3 {
+                height: 150px;
+                width: 150px;
+                right: -20px;
+                filter: blur(30px);
+            }
+        }
+
+
+        /* ============================================
+           SECTION 9: IPHONE SE / SMALL ANDROID (380px and below)
+           ============================================ */
+        @media (max-width: 380px) {
+            .login-form-side {
+                padding: 1.2rem 0.8rem;
+            }
+
+            .login-form-side .form-content {
+                padding: 0;
+            }
+
+            .form-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .form-header p {
+                font-size: 0.65rem;
+            }
+
+            .input-group label {
+                font-size: 0.6rem;
+            }
+
+            .input-group input {
+                font-size: 0.8rem;
+                padding: 0.3rem 0;
+            }
+
+            .login-btn {
+                padding: 0.65rem;
+                font-size: 0.8rem;
+                min-height: 40px;
+            }
+
+            .login-options {
+                font-size: 0.65rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .remember-me {
+                font-size: 0.6rem;
+            }
+
+            .forgot-link {
+                font-size: 0.6rem;
+            }
+
+            .login-footer p {
+                font-size: 0.6rem;
+            }
+
+            .wave-layer-1 {
+                height: 150px;
+                width: 150px;
+                top: -20px;
+                left: -20px;
+                filter: blur(20px);
+            }
+
+            .wave-layer-2 {
+                height: 200px;
+                width: 200px;
+                right: -20px;
+                bottom: -20px;
+                filter: blur(15px);
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Toast Notification Container -->
-<div class="toast-container" id="toastContainer"></div>
+    <!-- ============================================
+         TOAST NOTIFICATIONS
+         ============================================ -->
+    <div class="toast-container" id="toastContainer"></div>
 
-<!-- Django Messages (hidden, converted to toasts) -->
-{% if messages %}
-    <div class="messages" style="display: none;">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-{% endif %}
-
-<div class="login-container">
-    <!-- Left Side - Branding -->
-    <div class="login-brand">
-        <div class="brand-content">
-            <div class="brand-logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>EduNexus</span>
-            </div>
-            <h1 class="brand-title">Welcome Back</h1>
-            <p class="brand-subtitle">Sign in to continue your educational journey</p>
-            <ul class="brand-features">
-                <li><i class="fas fa-chart-line"></i> Track academic progress</li>
-                <li><i class="fas fa-credit-card"></i> Manage payments easily</li>
-                <li><i class="fas fa-bell"></i> Get real-time notifications</li>
-                <li><i class="fas fa-cloud"></i> Access anywhere, anytime</li>
-            </ul>
+    <!-- Django Messages (hidden, converted to toasts) -->
+    {% if messages %}
+        <div class="messages" style="display: none;">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
         </div>
-        <div class="brand-footer">
-            <p>© 2026 EduNexus. All rights reserved.</p>
-        </div>
-    </div>
+    {% endif %}
 
-    <!-- Right Side - Login Form (No Icons) -->
-    <div class="login-form-side">
-        <div class="form-header">
-            <h2>Sign In</h2>
-            <p>Enter your credentials to access your account</p>
-        </div>
+    <!-- ============================================
+         LOGIN CONTAINER - 2 DIVS ONLY
+         ============================================ -->
+    <div class="login-container">
 
-        <form method="POST" action="{% url 'login' %}">
-            {% csrf_token %}
-            
-            <div class="input-group">
-                <label>Username / Admission Number</label>
-                <input type="text" name="username" placeholder="Enter your username" required autocomplete="off">
-            </div>
-
-            <div class="input-group">
-                <label>Password</label>
-                <div class="password-wrapper">
-                    <input type="password" name="password" id="password" placeholder="Enter your password" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword()">
-                        <i class="far fa-eye" id="toggleIcon"></i>
-                    </button>
+        <!-- ===== DIV 1: GREEN CARD (LEFT) ===== -->
+        <div class="login-brand">
+            <div class="brand-content">
+                <div class="brand-logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    EduNexus
                 </div>
+                <h1 class="brand-title">Welcome Back</h1>
+                <p class="brand-subtitle">Sign in to continue your educational journey</p>
+                <ul class="brand-features">
+                    <li><i class="fas fa-check-circle"></i> Track academic progress</li>
+                    <li><i class="fas fa-check-circle"></i> Manage payments easily</li>
+                    <li><i class="fas fa-check-circle"></i> Get real-time notifications</li>
+                    <li><i class="fas fa-check-circle"></i> Access anywhere, anytime</li>
+                </ul>
             </div>
-
-            <div class="login-options">
-                <label class="remember-me">
-                    <input type="checkbox" name="remember"> Remember me
-                </label>
-                <a href="#" class="forgot-link">Forgot password?</a>
-            </div>
-
-            <button type="submit" class="login-btn">
-                <i class="fas fa-arrow-right-to-bracket"></i> Sign In
-            </button>
-        </form>
-
-        <div class="login-footer">
-            <p>Don't have an account? <a href="#">Contact Administrator</a></p>
         </div>
-    </div>
-</div>
 
-<script>
-    // Toggle password visibility
-    function togglePassword() {
-        const password = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggleIcon');
-        if (password.type === 'password') {
-            password.type = 'text';
-            toggleIcon.classList.remove('fa-eye');
-            toggleIcon.classList.add('fa-eye-slash');
-        } else {
-            password.type = 'password';
-            toggleIcon.classList.remove('fa-eye-slash');
-            toggleIcon.classList.add('fa-eye');
-        }
-    }
+        <!-- ===== DIV 2: WHITE CARD (RIGHT) WITH WAVES ===== -->
+        <div class="login-form-side">
+            
+            <!-- ===== WAVE LAYERS ===== -->
+            <div class="wave-layer-1"></div>
+            <div class="wave-layer-2"></div>
+            <div class="wave-layer-3"></div>
 
-    // Toast function
-    let lastToastMessage = '';
-    let lastToastTime = 0;
+            <div class="form-content">
+                <div class="form-header">
+                    <h2>Sign <span>In</span></h2>
+                    <p>Enter your credentials to access your account</p>
+                </div>
 
-    function showToast(message, type = 'success', title = '') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        
-        const now = Date.now();
-        if (lastToastMessage === message && (now - lastToastTime) < 2000) return;
-        lastToastMessage = message;
-        lastToastTime = now;
-        
-        const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notification' };
-        const finalTitle = title || titles[type] || 'Notification';
-        
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        
-        let iconClass = 'fa-check-circle';
-        let progressColor = '#10b981';
-        if (type === 'success') {
-            iconClass = 'fa-check-circle';
-            progressColor = '#10b981';
-        } else if (type === 'error') {
-            iconClass = 'fa-times-circle';
-            progressColor = '#ef4444';
-        } else if (type === 'warning') {
-            iconClass = 'fa-exclamation-triangle';
-            progressColor = '#f59e0b';
-        } else if (type === 'info') {
-            iconClass = 'fa-info-circle';
-            progressColor = '#3b82f6';
-        }
-        
-        toast.innerHTML = `
-            <div class="toast-icon"><i class="fas ${iconClass}"></i></div>
-            <div class="toast-content">
-                <div class="toast-title">${finalTitle}</div>
-                <div class="toast-message">${message}</div>
+                <form method="POST" action="{% url 'login' %}" id="loginForm">
+                    {% csrf_token %}
+                    
+                    <div class="input-group">
+                        <label>Username / Admission Number <span class="required">*</span></label>
+                        <input type="text" name="username" id="username" placeholder="Enter your username" required autocomplete="off">
+                        <span class="line-effect"></span>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Password <span class="required">*</span></label>
+                        <div class="password-wrapper">
+                            <input type="password" name="password" id="password" placeholder="Enter your password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword()">
+                                <i class="far fa-eye" id="toggleIcon"></i>
+                            </button>
+                            <span class="line-effect"></span>
+                        </div>
+                    </div>
+
+                    <div class="login-options">
+                        <label class="remember-me">
+                            <input type="checkbox" name="remember"> Remember me
+                        </label>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                        <span class="btn-text">Sign In</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="#">Contact Administrator</a></p>
+                </div>
+
             </div>
-            <button class="toast-close" onclick="this.closest('.toast').remove()"><i class="fas fa-times"></i></button>
-            <div class="toast-progress"><div class="toast-progress-bar" style="background: ${progressColor}"></div></div>
-        `;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.add('hide');
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
-    }
+        </div>
 
-    // Convert Django messages to toasts
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-            const messages = document.querySelectorAll('.alert');
-            messages.forEach(msg => {
-                let type = 'info';
-                let message = msg.innerText;
-                if (msg.classList.contains('alert-success')) type = 'success';
-                else if (msg.classList.contains('alert-error')) type = 'error';
-                else if (msg.classList.contains('alert-warning')) type = 'warning';
-                showToast(message, type);
-                msg.remove();
-            });
-        }, 100);
-    });
-</script>
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT
+         ============================================ -->
+    <script>
+        // ============================================
+        // TOGGLE PASSWORD VISIBILITY
+        // ============================================
+        function togglePassword() {
+            const password = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            if (password.type === 'password') {
+                password.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                password.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // ============================================
+        // TOAST NOTIFICATION SYSTEM
+        // ============================================
+        let lastToastMessage = '';
+        let lastToastTime = 0;
+
+        function showToast(message, type = 'success', title = '') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            const now = Date.now();
+            if (lastToastMessage === message && (now - lastToastTime) < 2000) return;
+            lastToastMessage = message;
+            lastToastTime = now;
+            
+            const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Notification' };
+            const finalTitle = title || titles[type] || 'Notification';
+            
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            let iconClass = 'fa-check-circle';
+            let progressColor = '#10b981';
+            if (type === 'success') {
+                iconClass = 'fa-check-circle';
+                progressColor = '#10b981';
+            } else if (type === 'error') {
+                iconClass = 'fa-times-circle';
+                progressColor = '#ef4444';
+            } else if (type === 'warning') {
+                iconClass = 'fa-exclamation-triangle';
+                progressColor = '#f59e0b';
+            } else if (type === 'info') {
+                iconClass = 'fa-info-circle';
+                progressColor = '#3b82f6';
+            }
+            
+            toast.innerHTML = `
+                <div class="toast-icon"><i class="fas ${iconClass}"></i></div>
+                <div class="toast-content">
+                    <div class="toast-title">${finalTitle}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.closest('.toast').remove()"><i class="fas fa-times"></i></button>
+                <div class="toast-progress"><div class="toast-progress-bar" style="background: ${progressColor}"></div></div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ============================================
+        // LOGIN BUTTON LOADING STATE
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (loginForm && loginBtn) {
+                loginForm.addEventListener('submit', function(e) {
+                    loginBtn.classList.add('loading');
+                    loginBtn.disabled = true;
+                });
+            }
+        });
+
+        // ============================================
+        // CONVERT DJANGO MESSAGES TO TOASTS
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const messages = document.querySelectorAll('.alert');
+                messages.forEach(msg => {
+                    let type = 'info';
+                    let message = msg.innerText;
+                    if (msg.classList.contains('alert-success')) type = 'success';
+                    else if (msg.classList.contains('alert-error')) type = 'error';
+                    else if (msg.classList.contains('alert-warning')) type = 'warning';
+                    showToast(message, type);
+                    msg.remove();
+                });
+            }, 100);
+        });
+    </script>
 
 </body>
 </html>
